@@ -1,25 +1,122 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from 'react'
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom'
+import { Box, CssBaseline } from '@mui/material'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
-function App() {
+// Components
+import Header from './components/Header.jsx'
+import Sidebar from './components/Sidebar.jsx'
+import BioForm from './components/forms/BioForm.jsx'
+import EducationForm from './components/forms/EducationForm.jsx'
+import ExperienceForm from './components/forms/ExperienceForm.jsx'
+import ProjectForm from './components/forms/ProjectForm.jsx'
+import SkillForm from './components/forms/SkillForm.jsx'
+import Login from './components/Login.jsx'
+
+import { supabase } from './config/supabase'
+
+const App = () => {
+  const [session, setSession] = useState(null)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  // Determine if we're running in production
+  const isProduction = process.env.NODE_ENV === 'production'
+  // Set the basename conditionally
+  const basename = isProduction ? '/portfoliomanagement' : ''
+
+  useEffect(() => {
+    // Check active sessions and set up auth listener
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setLoading(false)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      setLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen)
+  }
+
+  if (loading) {
+    return null
+  }
+
+  if (!session) {
+    return (
+      <>
+        <Login />
+        <ToastContainer position="bottom-right" />
+      </>
+    )
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
+    <Router basename={basename}>
+      <Box sx={{ display: 'flex' }}>
+        <CssBaseline />
+        
+        <Header 
+          handleDrawerToggle={handleDrawerToggle}
+          user={session.user}
+        />
+        
+        <Sidebar
+          mobileOpen={mobileOpen}
+          handleDrawerToggle={handleDrawerToggle}
+        />
+        
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            p: 3,
+            width: { sm: `calc(100% - ${280}px)` },
+            mt: 8,
+            backgroundColor: '#F8FAFC',
+            minHeight: '100vh',
+          }}
         >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+          <Routes>
+            <Route path="/" element={<Navigate to="/bio" replace />} />
+            <Route path="/bio" element={<BioForm />} />
+            <Route path="/education" element={<EducationForm />} />
+            <Route path="/experience" element={<ExperienceForm />} />
+            <Route path="/projects" element={<ProjectForm />} />
+            <Route path="/skills" element={<SkillForm />} />
+            <Route path="*" element={<Navigate to="/bio" replace />} />
+          </Routes>
+        </Box>
+        
+        <ToastContainer 
+          position="bottom-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
+      </Box>
+    </Router>
+  )
 }
 
-export default App;
+export default App

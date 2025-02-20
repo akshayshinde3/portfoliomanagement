@@ -1,22 +1,37 @@
 {
-  "name": "portfoliomanagement",
+  "name": "portfolio-management",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://akshayshinde3.github.io/portfoliomanagement",
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^6.4.4",
+    "@mui/material": "^6.4.4",
+    "@mui/x-date-pickers": "^7.26.0",
+    "@supabase/supabase-js": "^2.48.1",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^13.5.0",
+    "dayjs": "^1.11.13",
+    "formik": "^2.4.6",
+    "gh-pages": "^6.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.5",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "react-toastify": "^11.0.3",
+    "web-vitals": "^2.1.4",
+    "yup": "^1.6.1"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "predeploy": "if exist build rd /s /q build && set \"GENERATE_SOURCEMAP=false\" && react-scripts build",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": [
