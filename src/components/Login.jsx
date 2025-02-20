@@ -92,7 +92,7 @@ const Login = () => {
               mb: 2,
             }}
           >
-            Sandesh Arsud Portfolio Management
+            Akshay Shinde Portfolio Management
           </Typography>
         </Box>
 
