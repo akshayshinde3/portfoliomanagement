@@ -73,7 +73,7 @@ const Header = ({ handleDrawerToggle, user }) => {
   const getUserAvatar = () => {
     return (
       profileImage ||
-      bioData?.Image ||
+      bioData?.image ||
       user?.user_metadata?.avatar_url ||
       `https://ui-avatars.com/api/?name=${getUserDisplayName()}&background=0D8ABC&color=fff`
     );
