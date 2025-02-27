@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Avatar } from "@mui/material";
 import {
   Box,
   Button,
@@ -24,6 +25,28 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+
+  const fetchProfileImage = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("bio")
+        .select("image")
+        .single();
+
+      if (error) throw error;
+      if (data?.image) {
+        setAvatarUrl(data.image);
+      }
+    } catch (error) {
+      console.error("Error fetching profile image:", error.message);
+      toast.error("Failed to load profile image");
+    }
+  };
+
+  useEffect(() => {
+    fetchProfileImage();
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -52,8 +75,34 @@ const Login = () => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%)",
+        background: "linear-gradient(135deg, #1a237e 0%, #0d47a1 100%)",
         p: 3,
+        position: "relative",
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cpath d='M15 0h30v15H30v15H15V15H0V0h15zm0 60h30V45H30V30H15v15H0v15h15zM45 0h15v60H45V0zM0 15h15v30H0V15z'/%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundSize: "60px 60px",
+          opacity: 0.9,
+          pointerEvents: "none",
+          animation: "patternMove 60s linear infinite",
+        },
+        "@keyframes patternMove": {
+          "0%": {
+            backgroundPosition: "0 0",
+          },
+          "100%": {
+            backgroundPosition: "60px 60px",
+          },
+        },
+        "& > *": {
+          position: "relative",
+          zIndex: 1,
+        },
       }}
     >
       <Paper
@@ -61,9 +110,19 @@ const Login = () => {
         sx={{
           width: "100%",
           maxWidth: 450,
-          borderRadius: 4,
+          borderRadius: 3,
           overflow: "hidden",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+          position: "relative",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "4px",
+            background: "linear-gradient(90deg, #2196f3, #1976d2)",
+          },
         }}
       >
         {/* Header Section */}
@@ -71,35 +130,63 @@ const Login = () => {
           sx={{
             p: 4,
             pb: 3,
-            background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
-            color: "white",
+            background: "white",
+            color: "#1a237e",
             textAlign: "center",
           }}
         >
-          <Typography
-            variant="h5"
+          {/* Add Avatar here */}
+          <Avatar
+            src={avatarUrl}
+            alt="Akshay Shinde"
             sx={{
-              fontWeight: 600,
+              width: 120,
+              height: 120,
+              margin: "0 auto",
+              mb: 3,
+              border: "3px solid #1a237e",
+              boxShadow: "0 4px 12px rgba(26,35,126,0.15)",
+              animation: "fadeIn 0.5s ease-in-out",
+              "@keyframes fadeIn": {
+                "0%": {
+                  opacity: 0,
+                  transform: "scale(0.9)",
+                },
+                "100%": {
+                  opacity: 1,
+                  transform: "scale(1)",
+                },
+              },
+            }}
+          />
+          {/* Existing Typography components */}
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
               mb: 1,
+              background: "linear-gradient(90deg, #1a237e, #0d47a1)",
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
             }}
           >
             Welcome Back
           </Typography>
           <Typography
-            variant="body2"
+            variant="subtitle1"
             sx={{
-              color: "rgba(255,255,255,0.7)",
+              color: "#546e7a",
               mb: 2,
+              fontWeight: 500,
             }}
           >
             Akshay Shinde Portfolio Management
           </Typography>
         </Box>
 
-        <Divider />
-
         {/* Form Section */}
-        <Box sx={{ p: 4 }}>
+        <Box sx={{ p: 4, bgcolor: "#fafafa" }}>
           <form onSubmit={handleLogin}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
               <TextField
@@ -119,12 +206,17 @@ const Login = () => {
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
-                    backgroundColor: "#F8FAFC",
+                    backgroundColor: "white",
+                    transition: "all 0.2s ease-in-out",
                     "&:hover": {
-                      backgroundColor: "#F1F5F9",
+                      backgroundColor: "white",
+                      transform: "translateY(-1px)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
                     },
                     "&.Mui-focused": {
-                      backgroundColor: "#F8FAFC",
+                      backgroundColor: "white",
+                      transform: "translateY(-1px)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
                     },
                   },
                 }}
@@ -161,12 +253,17 @@ const Login = () => {
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
-                    backgroundColor: "#F8FAFC",
+                    backgroundColor: "white",
+                    transition: "all 0.2s ease-in-out",
                     "&:hover": {
-                      backgroundColor: "#F1F5F9",
+                      backgroundColor: "white",
+                      transform: "translateY(-1px)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
                     },
                     "&.Mui-focused": {
-                      backgroundColor: "#F8FAFC",
+                      backgroundColor: "white",
+                      transform: "translateY(-1px)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
                     },
                   },
                 }}
@@ -182,13 +279,14 @@ const Login = () => {
                   textTransform: "none",
                   borderRadius: 2,
                   fontSize: "1rem",
-                  background:
-                    "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+                  fontWeight: 600,
+                  background: "linear-gradient(90deg, #1a237e, #0d47a1)",
+                  transition: "all 0.2s ease-in-out",
                   "&:hover": {
-                    background:
-                      "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
+                    background: "linear-gradient(90deg, #0d47a1, #1a237e)",
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 6px 20px rgba(26,35,126,0.3)",
                   },
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                 }}
               >
                 {loading ? "Signing in..." : "Sign in"}
@@ -196,8 +294,18 @@ const Login = () => {
             </Box>
           </form>
 
-          <Box sx={{ mt: 3, textAlign: "center" }}>
-            <Typography variant="body2" sx={{ color: "#64748B" }}>
+          <Box sx={{ mt: 4, textAlign: "center" }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "#546e7a",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1,
+              }}
+            >
+              <LockIcon sx={{ fontSize: 16 }} />
               Secure login for portfolio management
             </Typography>
           </Box>

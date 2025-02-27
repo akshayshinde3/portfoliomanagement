@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider, createTheme } from "@mui/material";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import Login from "./components/auth/Login";
 import Dashboard from "./components/dashboard/Dashboard";
+import Redirect from "./components/Redirect";
 
 const theme = createTheme({
   palette: {
@@ -22,9 +23,12 @@ const theme = createTheme({
 
 function App() {
   return (
-    <BrowserRouter basename="/portfoliomanagement">
-      <Dashboard />
-    </BrowserRouter>
+    <Router basename="/portfoliomanagement">
+      <Routes>
+        <Route path="/:shortCode" element={<Redirect />} />
+        {/* ...other routes... */}
+      </Routes>
+    </Router>
   );
 }
 

@@ -26,6 +26,144 @@ import {
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import { supabase } from "../../config/supabase";
+import { skillsApi, skillCategoriesApi } from "../../api/SupabaseData";
+
+const styles = {
+  gradientHeader: {
+    background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+    color: "white",
+    p: 4,
+  },
+
+  headerText: {
+    background: "linear-gradient(135deg, #E2E8F0 0%, #FFFFFF 100%)",
+    backgroundClip: "text",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    fontWeight: 700,
+    letterSpacing: "-0.01em",
+  },
+
+  skillCard: {
+    p: 2,
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    borderRadius: 3,
+    border: "1px solid",
+    borderColor: "grey.200",
+    transition: "all 0.3s ease",
+    "&:hover": {
+      transform: "translateY(-4px)",
+      boxShadow: "0 12px 24px rgba(0,0,0,0.1)",
+    },
+  },
+
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 2,
+    overflow: "hidden",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    bgcolor: "#F8FAFC",
+    border: "1px solid",
+    borderColor: "grey.100",
+    transition: "transform 0.2s ease",
+    "&:hover": {
+      transform: "scale(1.05)",
+    },
+  },
+
+  dialogField: {
+    "& .MuiOutlinedInput-root": {
+      borderRadius: 2,
+      transition: "all 0.2s ease",
+      "&:hover": {
+        backgroundColor: "#F8FAFC",
+        "& .MuiOutlinedInput-notchedOutline": {
+          borderColor: "#94A3B8",
+        },
+      },
+      "&.Mui-focused": {
+        backgroundColor: "#F8FAFC",
+        "& .MuiOutlinedInput-notchedOutline": {
+          borderColor: "#0F172A",
+          borderWidth: 2,
+        },
+      },
+    },
+  },
+
+  categoryPaper: {
+    mt: 4,
+    borderRadius: 4,
+    overflow: "hidden",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+    background: "linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)",
+  },
+
+  categoryCard: {
+    p: 3,
+    borderRadius: 3,
+    backgroundColor: "white",
+    transition: "all 0.3s ease",
+    border: "1px solid",
+    borderColor: "grey.200",
+    "&:hover": {
+      transform: "translateY(-4px)",
+      boxShadow: "0 12px 24px rgba(0,0,0,0.1)",
+    },
+  },
+
+  categoryHeader: {
+    background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+    color: "white",
+    p: 4,
+  },
+
+  dialogHeader: {
+    background: "linear-gradient(135deg,rgb(0, 0, 0) 0%,rgb(0, 0, 0) 100%)",
+    color: "white",
+    px: 3,
+    py: 2,
+  },
+
+  dialogHeaderContent: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  dialogCloseButton: {
+    color: "white",
+    "&:hover": {
+      backgroundColor: "rgba(255, 255, 255, 0.1)",
+    },
+  },
+
+  cancelButton: {
+    borderColor: "#E2E8F0",
+    color: "#64748B",
+    "&:hover": {
+      borderColor: "#CBD5E1",
+      backgroundColor: "#F1F5F9",
+    },
+  },
+
+  deleteButton: {
+    background: "linear-gradient(135deg, #DC2626 0%, #EF4444 100%)",
+    color: "white",
+    px: 3,
+    py: 1,
+    borderRadius: 2,
+    textTransform: "none",
+    "&:hover": {
+      background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
+    },
+  },
+};
 
 const SkillForm = () => {
   const [skills, setSkills] = useState([]);
@@ -40,6 +178,11 @@ const SkillForm = () => {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [currentCategory, setCurrentCategory] = useState({ title: "" });
   const [editingCategory, setEditingCategory] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [categoryDeleteDialogOpen, setCategoryDeleteDialogOpen] =
+    useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
 
   useEffect(() => {
     fetchCategories();
@@ -129,14 +272,22 @@ const SkillForm = () => {
     setOpen(true);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = (skillId) => {
+    setItemToDelete({ id: skillId, type: "skill" });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
     try {
-      const { error } = await supabase.from("skills").delete().eq("id", id);
-
+      const { error } = await supabase
+        .from("skills")
+        .delete()
+        .eq("id", itemToDelete.id);
       if (error) throw error;
-
       await fetchSkills();
       toast.success("Skill deleted successfully");
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
     } catch (error) {
       toast.error("Error deleting skill: " + error.message);
     }
@@ -152,7 +303,6 @@ const SkillForm = () => {
     });
   };
 
-  // Update the handleCategorySubmit function
   const handleCategorySubmit = async () => {
     try {
       if (!currentCategory.title) {
@@ -186,33 +336,33 @@ const SkillForm = () => {
     setCategoryDialogOpen(true);
   };
 
-  const handleDeleteCategory = async (id) => {
+  const handleDeleteCategory = (categoryId, skillCount) => {
+    setCategoryToDelete({ id: categoryId, skillCount });
+    setCategoryDeleteDialogOpen(true);
+  };
+
+  const handleConfirmCategoryDelete = async () => {
     try {
-      const { data: skillsInCategory, error: checkError } = await supabase
+      const { error: updateError } = await supabase
         .from("skills")
-        .select("id, name")
-        .eq("category_id", id);
+        .update({ category_id: null })
+        .eq("category_id", categoryToDelete.id);
 
-      if (checkError) throw checkError;
-
-      if (skillsInCategory?.length > 0) {
-        toast.error(
-          `Cannot delete category. ${skillsInCategory.length} skills are using this category.`
-        );
-        return;
-      }
+      if (updateError) throw updateError;
 
       const { error: deleteError } = await supabase
         .from("skill_categories")
         .delete()
-        .eq("id", id);
+        .eq("id", categoryToDelete.id);
 
       if (deleteError) throw deleteError;
 
       await fetchCategories();
+      await fetchSkills();
       toast.success("Category deleted successfully");
+      setCategoryDeleteDialogOpen(false);
+      setCategoryToDelete(null);
     } catch (error) {
-      console.error("Error deleting category:", error);
       toast.error("Error deleting category: " + error.message);
     }
   };
@@ -232,44 +382,50 @@ const SkillForm = () => {
           boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            backgroundColor: "#F8FAFC",
-            p: 4,
-            borderBottom: "1px solid",
-            borderColor: "grey.200",
-          }}
-        >
-          <Box>
-            <Typography
-              variant="h4"
-              sx={{ fontWeight: 600, color: "#1E293B", mb: 1 }}
-            >
-              Skills
-            </Typography>
-            <Typography variant="body1" sx={{ color: "#64748B" }}>
-              Manage your skills and technologies
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              setEditMode(false);
-              setOpen(true);
-            }}
+        <Box sx={styles.gradientHeader}>
+          <Box
             sx={{
-              backgroundColor: "#0F172A",
-              "&:hover": { backgroundColor: "#1E293B" },
-              borderRadius: 2,
-              textTransform: "none",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            Add Skill
-          </Button>
+            <Box>
+              <Typography variant="h4" sx={styles.headerText}>
+                Skills
+              </Typography>
+              <Typography variant="body1" sx={{ color: "#94A3B8", mt: 1 }}>
+                Manage your skills and technologies
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setEditMode(false);
+                setOpen(true);
+              }}
+              sx={{
+                background: "linear-gradient(135deg, #E2E8F0 0%, #FFFFFF 100%)",
+                color: "#0F172A",
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                borderRadius: 2,
+                textTransform: "none",
+                boxShadow: "0 4px 12px rgba(255,255,255,0.15)",
+                "&:hover": {
+                  background:
+                    "linear-gradient(135deg, #FFFFFF 0%, #E2E8F0 100%)",
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 6px 16px rgba(255,255,255,0.2)",
+                },
+                transition: "all 0.2s ease-in-out",
+              }}
+            >
+              Add Skill
+            </Button>
+          </Box>
         </Box>
 
         <Box sx={{ p: 4 }}>
@@ -283,18 +439,7 @@ const SkillForm = () => {
                   .filter((skill) => skill.category_id === category.id)
                   .map((skill) => (
                     <Grid item xs={12} sm={6} md={4} lg={3} key={skill.id}>
-                      <Card
-                        sx={{
-                          p: 2,
-                          height: "100%",
-                          display: "flex",
-                          flexDirection: "column",
-                          borderRadius: 3,
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                          border: "1px solid",
-                          borderColor: "grey.200",
-                        }}
-                      >
+                      <Card sx={styles.skillCard}>
                         <Box
                           sx={{
                             display: "flex",
@@ -303,18 +448,7 @@ const SkillForm = () => {
                             mb: 2,
                           }}
                         >
-                          <Box
-                            sx={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: 2,
-                              overflow: "hidden",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              bgcolor: "#F8FAFC",
-                            }}
-                          >
+                          <Box sx={styles.iconContainer}>
                             {skill.image && (
                               <img
                                 src={skill.image}
@@ -331,14 +465,28 @@ const SkillForm = () => {
                             <IconButton
                               size="small"
                               onClick={() => handleEdit(skill)}
-                              sx={{ color: "#1E293B" }}
+                              sx={{
+                                color: "#1E293B",
+                                transition: "all 0.2s ease",
+                                "&:hover": {
+                                  backgroundColor: "#F1F5F9",
+                                  transform: "translateY(-2px)",
+                                },
+                              }}
                             >
                               <EditIcon fontSize="small" />
                             </IconButton>
                             <IconButton
                               size="small"
                               onClick={() => handleDelete(skill.id)}
-                              sx={{ color: "#EF4444" }}
+                              sx={{
+                                color: "#EF4444",
+                                transition: "all 0.2s ease",
+                                "&:hover": {
+                                  backgroundColor: "#FEE2E2",
+                                  transform: "translateY(-2px)",
+                                },
+                              }}
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
@@ -346,7 +494,10 @@ const SkillForm = () => {
                         </Box>
                         <Typography
                           variant="subtitle2"
-                          sx={{ color: "#1E293B" }}
+                          sx={{
+                            color: "#1E293B",
+                            fontWeight: 600,
+                          }}
                         >
                           {skill.name}
                         </Typography>
@@ -359,86 +510,8 @@ const SkillForm = () => {
         </Box>
       </Paper>
 
-      <Paper
-        sx={{
-          mt: 4,
-          p: 4,
-          borderRadius: 4,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
-        >
-          <Typography variant="h5" sx={{ fontWeight: 600, color: "#1E293B" }}>
-            Skill Categories
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setCategoryDialogOpen(true)}
-            sx={{
-              backgroundColor: "#0F172A",
-              "&:hover": { backgroundColor: "#1E293B" },
-              borderRadius: 2,
-              textTransform: "none",
-            }}
-          >
-            Add Category
-          </Button>
-        </Box>
-        <Grid container spacing={2}>
-          {categories.map((category) => (
-            <Grid item xs={12} sm={6} md={4} key={category.id}>
-              <Card
-                sx={{
-                  p: 2,
-                  borderRadius: 3,
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                  border: "1px solid",
-                  borderColor: "grey.200",
-                }}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <Typography variant="subtitle1" sx={{ color: "#1E293B" }}>
-                    {category.title}
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditCategory(category)}
-                      sx={{ color: "#1E293B" }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDeleteCategory(category.id)}
-                      sx={{ color: "#EF4444" }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </Box>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
-
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
+      <Paper sx={styles.categoryPaper}>
+        <Box sx={styles.categoryHeader}>
           <Box
             sx={{
               display: "flex",
@@ -446,15 +519,164 @@ const SkillForm = () => {
               alignItems: "center",
             }}
           >
-            <Typography variant="h6" sx={{ color: "#1E293B", fontWeight: 600 }}>
+            <Box>
+              <Typography variant="h4" sx={styles.headerText}>
+                Skill Categories
+              </Typography>
+              <Typography variant="body1" sx={{ color: "#94A3B8", mt: 1 }}>
+                Organize your skills into categories
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setCategoryDialogOpen(true)}
+              sx={{
+                background: "linear-gradient(135deg, #E2E8F0 0%, #FFFFFF 100%)",
+                color: "#0F172A",
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                borderRadius: 2,
+                textTransform: "none",
+                boxShadow: "0 4px 12px rgba(255,255,255,0.15)",
+                "&:hover": {
+                  background:
+                    "linear-gradient(135deg, #FFFFFF 0%, #E2E8F0 100%)",
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 6px 16px rgba(255,255,255,0.2)",
+                },
+                transition: "all 0.2s ease-in-out",
+              }}
+            >
+              Add Category
+            </Button>
+          </Box>
+        </Box>
+
+        <Box sx={{ p: 4 }}>
+          <Grid container spacing={2}>
+            {categories.map((category) => (
+              <Grid item xs={12} sm={6} md={4} key={category.id}>
+                <Card sx={styles.categoryCard}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Box>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          color: "#1E293B",
+                          fontWeight: 600,
+                          mb: 0.5,
+                        }}
+                      >
+                        {category.title}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: "#64748B" }}>
+                        {
+                          skills.filter(
+                            (skill) => skill.category_id === category.id
+                          ).length
+                        }{" "}
+                        skills
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEditCategory(category)}
+                        sx={{
+                          color: "#1E293B",
+                          transition: "all 0.2s ease",
+                          "&:hover": {
+                            backgroundColor: "#F1F5F9",
+                            transform: "translateY(-2px)",
+                          },
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteCategory(category.id)}
+                        sx={{
+                          color: "#EF4444",
+                          transition: "all 0.2s ease",
+                          "&:hover": {
+                            backgroundColor: "#FEE2E2",
+                            transform: "translateY(-2px)",
+                          },
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      </Paper>
+
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            overflow: "hidden",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+            color: "white",
+            px: 3,
+            py: 2,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
               {editMode ? "Edit Skill" : "Add Skill"}
             </Typography>
-            <IconButton onClick={handleClose}>
+            <IconButton
+              onClick={handleClose}
+              sx={{
+                color: "white",
+                "&:hover": {
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                },
+              }}
+            >
               <CloseIcon />
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
+        <DialogContent
+          sx={{
+            p: 3,
+            pt: 4,
+            "&.MuiDialogContent-root": {
+              paddingTop: "24px !important",
+            },
+          }}
+        >
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <TextField
@@ -465,10 +687,11 @@ const SkillForm = () => {
                 onChange={(e) =>
                   setCurrentSkill({ ...currentSkill, name: e.target.value })
                 }
+                sx={styles.dialogField}
               />
             </Grid>
             <Grid item xs={12}>
-              <FormControl fullWidth required>
+              <FormControl fullWidth required sx={styles.dialogField}>
                 <InputLabel>Category</InputLabel>
                 <Select
                   value={currentSkill.category_id || ""}
@@ -496,6 +719,7 @@ const SkillForm = () => {
                 onChange={(e) =>
                   setCurrentSkill({ ...currentSkill, image: e.target.value })
                 }
+                sx={styles.dialogField}
               />
               {currentSkill.image && (
                 <Box sx={{ mt: 2, display: "flex", justifyContent: "center" }}>
@@ -526,13 +750,11 @@ const SkillForm = () => {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
+        <DialogActions sx={{ p: 3, backgroundColor: "#F8FAFC" }}>
           <Button
             onClick={handleClose}
-            sx={{
-              color: "#64748B",
-              textTransform: "none",
-            }}
+            variant="outlined"
+            sx={styles.cancelButton}
           >
             Cancel
           </Button>
@@ -541,10 +763,15 @@ const SkillForm = () => {
             variant="contained"
             startIcon={<SaveIcon />}
             sx={{
-              backgroundColor: "#0F172A",
-              "&:hover": { backgroundColor: "#1E293B" },
+              background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+              color: "white",
+              px: 3,
+              py: 1,
               borderRadius: 2,
               textTransform: "none",
+              "&:hover": {
+                background: "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
+              },
             }}
           >
             {editMode ? "Save Changes" : "Add Skill"}
@@ -557,8 +784,22 @@ const SkillForm = () => {
         onClose={handleCategoryClose}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            overflow: "hidden",
+          },
+        }}
       >
-        <DialogTitle>
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+            color: "white",
+            px: 3,
+            py: 2,
+          }}
+        >
           <Box
             sx={{
               display: "flex",
@@ -566,15 +807,31 @@ const SkillForm = () => {
               alignItems: "center",
             }}
           >
-            <Typography variant="h6" sx={{ color: "#1E293B", fontWeight: 600 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
               {editingCategory ? "Edit Category" : "Add Category"}
             </Typography>
-            <IconButton onClick={handleCategoryClose}>
+            <IconButton
+              onClick={handleCategoryClose}
+              sx={{
+                color: "white",
+                "&:hover": {
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                },
+              }}
+            >
               <CloseIcon />
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
+        <DialogContent
+          sx={{
+            p: 3,
+            pt: 4,
+            "&.MuiDialogContent-root": {
+              paddingTop: "24px !important",
+            },
+          }}
+        >
           <TextField
             fullWidth
             required
@@ -583,15 +840,14 @@ const SkillForm = () => {
             onChange={(e) =>
               setCurrentCategory({ ...currentCategory, title: e.target.value })
             }
+            sx={styles.dialogField}
           />
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
+        <DialogActions sx={{ p: 3, backgroundColor: "#F8FAFC" }}>
           <Button
             onClick={handleCategoryClose}
-            sx={{
-              color: "#64748B",
-              textTransform: "none",
-            }}
+            variant="outlined"
+            sx={styles.cancelButton}
           >
             Cancel
           </Button>
@@ -600,13 +856,157 @@ const SkillForm = () => {
             variant="contained"
             startIcon={<SaveIcon />}
             sx={{
-              backgroundColor: "#0F172A",
-              "&:hover": { backgroundColor: "#1E293B" },
+              background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+              color: "white",
+              px: 3,
+              py: 1,
               borderRadius: 2,
               textTransform: "none",
+              "&:hover": {
+                background: "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
+              },
             }}
           >
             {editingCategory ? "Save Changes" : "Add Category"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            overflow: "hidden",
+          },
+        }}
+      >
+        <DialogTitle sx={styles.dialogHeader}>
+          <Box sx={styles.dialogHeaderContent}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Delete Skill
+            </Typography>
+            <IconButton
+              onClick={() => setDeleteDialogOpen(false)}
+              sx={styles.dialogCloseButton}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, pt: 4 }}>
+          <Typography>Are you sure you want to delete this skill?</Typography>
+          <Typography variant="body2" sx={{ color: "#64748B", mt: 1 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, backgroundColor: "#F8FAFC" }}>
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            variant="outlined"
+            sx={styles.cancelButton}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            variant="contained"
+            sx={styles.deleteButton}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={categoryDeleteDialogOpen}
+        onClose={() => setCategoryDeleteDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            overflow: "hidden",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+            color: "white",
+            px: 3,
+            py: 2,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Delete Category
+            </Typography>
+            <IconButton
+              onClick={() => setCategoryDeleteDialogOpen(false)}
+              sx={{
+                color: "white",
+                "&:hover": { backgroundColor: "rgba(255,255,255,0.1)" },
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, pt: 4 }}>
+          <Typography>
+            Are you sure you want to delete this category?
+          </Typography>
+          {categoryToDelete?.skillCount > 0 && (
+            <Typography sx={{ color: "#EF4444", mt: 1 }}>
+              This category contains {categoryToDelete.skillCount} skills. These
+              skills will be uncategorized.
+            </Typography>
+          )}
+          <Typography variant="body2" sx={{ color: "#64748B", mt: 1 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, backgroundColor: "#F8FAFC" }}>
+          <Button
+            onClick={() => setCategoryDeleteDialogOpen(false)}
+            variant="outlined"
+            sx={{
+              borderColor: "#E2E8F0",
+              color: "#64748B",
+              "&:hover": {
+                borderColor: "#CBD5E1",
+                backgroundColor: "#F1F5F9",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmCategoryDelete}
+            variant="contained"
+            sx={{
+              background: "linear-gradient(135deg, #DC2626 0%, #EF4444 100%)",
+              color: "white",
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              textTransform: "none",
+              "&:hover": {
+                background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
+              },
+            }}
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

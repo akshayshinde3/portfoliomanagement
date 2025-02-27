@@ -17,6 +17,8 @@ import {
   Code as ProjectIcon,
   Psychology as SkillIcon,
   Logout as LogoutIcon,
+  Link as LinkIcon,
+  Image as ImageIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -39,6 +41,16 @@ const menuItems = [
     text: "Education",
     path: "/portfoliomanagement/education",
     icon: <SchoolIcon />,
+  },
+  {
+    text: "Short URLs",
+    path: "/portfoliomanagement/short-urls",
+    icon: <LinkIcon />,
+  },
+  {
+    text: "Image Upload",
+    path: "/portfoliomanagement/image-upload",
+    icon: <ImageIcon />,
   },
 ];
 

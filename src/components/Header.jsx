@@ -84,11 +84,12 @@ const Header = ({ handleDrawerToggle, user }) => {
       position="fixed"
       sx={{
         zIndex: (theme) => theme.zIndex.drawer + 1,
-        backgroundColor: "white",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+        background: "rgba(255, 255, 255, 0.95)",
+        backdropFilter: "blur(10px)",
+        boxShadow: "0 2px 20px rgba(0,0,0,0.05)",
       }}
     >
-      <Toolbar>
+      <Toolbar sx={{ minHeight: { xs: 64, sm: 70 } }}>
         <IconButton
           color="inherit"
           aria-label="open drawer"
@@ -98,6 +99,11 @@ const Header = ({ handleDrawerToggle, user }) => {
             mr: 2,
             display: { sm: "none" },
             color: "#1E293B",
+            "&:hover": {
+              background: "rgba(30, 41, 59, 0.04)",
+              transform: "scale(1.05)",
+            },
+            transition: "all 0.2s ease-in-out",
           }}
         >
           <MenuIcon />
@@ -116,8 +122,13 @@ const Header = ({ handleDrawerToggle, user }) => {
             noWrap
             component="div"
             sx={{
-              color: "#1E293B",
-              fontWeight: 600,
+              background: "linear-gradient(135deg, #1E293B 0%, #334155 100%)",
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              fontWeight: 700,
+              fontSize: { xs: "1rem", sm: "1.25rem" },
+              letterSpacing: "-0.01em",
               display: "flex",
               alignItems: "center",
               gap: 2,
@@ -130,7 +141,7 @@ const Header = ({ handleDrawerToggle, user }) => {
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: 2,
+              gap: { xs: 1, sm: 3 },
             }}
           >
             {user && (
@@ -139,27 +150,40 @@ const Header = ({ handleDrawerToggle, user }) => {
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 2,
+                    gap: { xs: 1, sm: 2 },
+                    background: "rgba(30, 41, 59, 0.03)",
+                    padding: "6px 12px",
+                    borderRadius: "30px",
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      background: "rgba(30, 41, 59, 0.06)",
+                    },
                   }}
                 >
                   <Avatar
                     src={getUserAvatar()}
                     alt={getUserDisplayName()}
                     sx={{
-                      width: 40,
-                      height: 40,
+                      width: { xs: 36, sm: 40 },
+                      height: { xs: 36, sm: 40 },
                       border: "2px solid white",
                       bgcolor: "#0D8ABC",
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                      boxShadow: "0 2px 8px rgba(13,138,188,0.2)",
+                      transition: "all 0.2s ease",
+                      "&:hover": {
+                        transform: "scale(1.05)",
+                        boxShadow: "0 4px 12px rgba(13,138,188,0.3)",
+                      },
                     }}
                   />
                   {!isMobile && (
-                    <Box>
+                    <Box sx={{ minWidth: 100 }}>
                       <Typography
                         variant="subtitle2"
                         sx={{
                           color: "#1E293B",
                           fontWeight: 600,
+                          lineHeight: 1.2,
                         }}
                       >
                         {getUserDisplayName()}
@@ -168,6 +192,8 @@ const Header = ({ handleDrawerToggle, user }) => {
                         variant="caption"
                         sx={{
                           color: "#64748B",
+                          display: "block",
+                          fontSize: "0.75rem",
                         }}
                       >
                         {bioData?.title || user.email}
@@ -182,11 +208,18 @@ const Header = ({ handleDrawerToggle, user }) => {
                   sx={{
                     borderColor: "#E2E8F0",
                     color: "#64748B",
+                    borderRadius: "25px",
+                    px: { xs: 2, sm: 3 },
+                    py: 1,
                     "&:hover": {
                       borderColor: "#CBD5E1",
                       backgroundColor: "#F8FAFC",
+                      transform: "translateY(-1px)",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
                     },
                     textTransform: "none",
+                    transition: "all 0.2s ease",
+                    minWidth: { xs: 40, sm: "auto" },
                   }}
                 >
                   {isMobile ? "" : "Logout"}
