@@ -24,9 +24,9 @@ import {
   Save as SaveIcon,
   Close as CloseIcon,
 } from "@mui/icons-material";
-import { toast } from "react-toastify";
 import { supabase } from "../../config/supabase";
 import { skillsApi, skillCategoriesApi } from "../../api/SupabaseData";
+import { Toaster, toast } from "react-hot-toast";
 
 const styles = {
   gradientHeader: {
@@ -237,7 +237,8 @@ const SkillForm = () => {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (values) => {
+    const loadingToast = toast.loading("Saving skill...");
     try {
       if (!currentSkill.name || !currentSkill.category_id) {
         toast.error("Please fill in required fields (Name and Category)");
@@ -257,10 +258,12 @@ const SkillForm = () => {
 
       await fetchSkills();
       handleClose();
+      toast.dismiss(loadingToast);
       toast.success(
         editMode ? "Skill updated successfully" : "Skill added successfully"
       );
     } catch (error) {
+      toast.dismiss(loadingToast);
       console.error("Error saving skill:", error);
       toast.error("Error saving skill: " + error.message);
     }
@@ -272,23 +275,29 @@ const SkillForm = () => {
     setOpen(true);
   };
 
-  const handleDelete = (skillId) => {
-    setItemToDelete({ id: skillId, type: "skill" });
+  const handleDelete = (skill) => {
+    setItemToDelete(skill);
     setDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
+    const loadingToast = toast.loading("Deleting skill...");
     try {
       const { error } = await supabase
         .from("skills")
         .delete()
         .eq("id", itemToDelete.id);
+
       if (error) throw error;
+
       await fetchSkills();
+      toast.dismiss(loadingToast);
       toast.success("Skill deleted successfully");
       setDeleteDialogOpen(false);
       setItemToDelete(null);
     } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error("Error deleting skill:", error);
       toast.error("Error deleting skill: " + error.message);
     }
   };
@@ -478,7 +487,7 @@ const SkillForm = () => {
                             </IconButton>
                             <IconButton
                               size="small"
-                              onClick={() => handleDelete(skill.id)}
+                              onClick={() => handleDelete(skill)} // Pass the entire skill object instead of just skill.id
                               sx={{
                                 color: "#EF4444",
                                 transition: "all 0.2s ease",
@@ -1010,6 +1019,16 @@ const SkillForm = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            padding: "16px",
+            borderRadius: "8px",
+            fontSize: "14px",
+          },
+        }}
+      />
     </Box>
   );
 };

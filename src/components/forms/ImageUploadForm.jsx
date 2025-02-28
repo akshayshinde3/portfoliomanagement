@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -7,14 +7,34 @@ import {
   CircularProgress,
   TextField,
   IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tooltip,
+  TablePagination,
 } from "@mui/material";
-import { CloudUpload, ContentCopy, Close } from "@mui/icons-material";
+import { CloudUpload, ContentCopy, Close, Delete } from "@mui/icons-material";
 import { storage as configuredStorage } from "../../config/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+  listAll,
+  getMetadata,
+} from "firebase/storage";
 import { v4 as uuidv4 } from "uuid";
-import { toast } from "react-toastify";
+import { Toaster, toast } from "react-hot-toast";
 import { supabase } from "../../config/supabase";
 import LinkIcon from "@mui/icons-material/Link";
+import {
+  ContentCopy as ContentCopyIcon,
+  Delete as DeleteIcon,
+  Info as InfoIcon,
+} from "@mui/icons-material";
 
 // Update the styles object
 const styles = {
@@ -145,6 +165,96 @@ const styles = {
     fontSize: "0.75rem",
     backdropFilter: "blur(4px)",
   },
+  tableContainer: {
+    mt: 4,
+    borderRadius: 2,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+    overflow: "auto",
+    maxWidth: "100vw",
+    "& .MuiTable-root": {
+      minWidth: 1400,
+    },
+  },
+  tableHeader: {
+    backgroundColor: "#F8FAFC",
+  },
+  tableHeaderCell: {
+    color: "#1E293B",
+    fontWeight: 600,
+    fontSize: "0.875rem",
+  },
+  imagePreviewCell: {
+    width: 100,
+    p: 1,
+    minWidth: 100, // Added minimum width
+  },
+  imageThumb: {
+    width: 80,
+    height: 80,
+    objectFit: "cover",
+    borderRadius: 1,
+    transition: "transform 0.2s ease",
+    "&:hover": {
+      transform: "scale(1.05)",
+    },
+  },
+  urlCell: {
+    maxWidth: 200, // Reduced from 300
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  folderCell: {
+    maxWidth: 150,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  typeCell: {
+    maxWidth: 120,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  sizeCell: {
+    width: 100,
+    minWidth: 100,
+  },
+  dateCell: {
+    width: 120,
+    minWidth: 120,
+  },
+  actionsCell: {
+    width: 120,
+    minWidth: 120,
+  },
+  actionButton: {
+    transition: "all 0.2s ease",
+    "&:hover": {
+      transform: "translateY(-2px)",
+    },
+  },
+  dimensionHelper: {
+    display: "flex",
+    alignItems: "center",
+    gap: 1,
+    mt: 2,
+    color: "#64748B",
+    fontSize: "0.875rem",
+    padding: "8px 12px",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 1,
+    border: "1px solid #E2E8F0",
+  },
+};
+
+// Add this helper function
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 
 const ImageUploadForm = () => {
@@ -156,6 +266,7 @@ const ImageUploadForm = () => {
   const [shorteningLoading, setShorteningLoading] = useState(false);
   const [imageName, setImageName] = useState("");
   const [dimensions, setDimensions] = useState(null);
+  const [uploadedImages, setUploadedImages] = useState([]);
 
   const getImageDimensions = (url) => {
     return new Promise((resolve) => {
@@ -176,6 +287,7 @@ const ImageUploadForm = () => {
         setPreviewUrl(reader.result);
         const dims = await getImageDimensions(reader.result);
         setDimensions(dims);
+        toast.success("Image selected successfully!");
       };
       reader.readAsDataURL(file);
     } else {
@@ -189,6 +301,7 @@ const ImageUploadForm = () => {
       return;
     }
 
+    const loadingToast = toast.loading("Uploading image...");
     try {
       setLoading(true);
       const fileName = imageName.trim()
@@ -209,18 +322,36 @@ const ImageUploadForm = () => {
       await uploadBytes(fileRef, selectedFile, metadata);
       const url = await getDownloadURL(fileRef);
       setDownloadUrl(url);
+
+      // Add image to uploadedImages array once
+      setUploadedImages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          name: imageName || fileName,
+          url: url,
+          size: selectedFile.size,
+          dimensions: dimensions,
+        },
+      ]);
+
+      toast.dismiss(loadingToast);
       toast.success("Image uploaded successfully!");
+      handleClear(); // Clear the form after successful upload
     } catch (error) {
       console.error("Upload error:", error);
+      toast.dismiss(loadingToast);
       toast.error(`Upload failed: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCopyUrl = () => {
-    navigator.clipboard.writeText(downloadUrl);
-    toast.success("URL copied to clipboard!");
+  const handleCopyUrl = (url) => {
+    navigator.clipboard.writeText(url);
+    toast.success("URL copied to clipboard!", {
+      icon: "📋",
+    });
   };
 
   const handleClear = () => {
@@ -229,43 +360,97 @@ const ImageUploadForm = () => {
     setDownloadUrl("");
     setImageName("");
     setDimensions(null);
+    toast.success("Form cleared", {
+      duration: 2000,
+    });
   };
 
-  const handleShortenUrl = async () => {
-    if (!downloadUrl) {
-      toast.error("Please upload an image first");
-      return;
-    }
-
+  const handleDelete = async (imagePath) => {
+    const loadingToast = toast.loading("Deleting image...");
     try {
-      setShorteningLoading(true);
-      const shortCode = Math.random().toString(36).substr(2, 6);
-
-      const { error } = await supabase.from("short_urls").insert([
-        {
-          long_url: downloadUrl,
-          short_code: shortCode,
-          created_at: new Date().toISOString(),
-        },
-      ]);
-
-      if (error) throw error;
-
-      // Generate consistent short URLs
-      const shortUrl = `${window.location.origin}/portfoliomanagement/r/${shortCode}`;
-      setShortUrl(shortUrl);
-      toast.success("URL shortened successfully!");
+      const fileRef = ref(configuredStorage, imagePath);
+      await deleteObject(fileRef);
+      toast.dismiss(loadingToast);
+      toast.success("Image deleted successfully!");
     } catch (error) {
-      console.error("Shortening error:", error);
-      toast.error(`Failed to shorten URL: ${error.message}`);
-    } finally {
-      setShorteningLoading(false);
+      console.error("Delete error:", error);
+      toast.dismiss(loadingToast);
+      toast.error(`Failed to delete image: ${error.message}`);
     }
   };
+
+  // const handleShortenUrl = async () => {
+  //   if (!downloadUrl) {
+  //     toast.error("Please upload an image first");
+  //     return;
+  //   }
+
+  //   try {
+  //     setShorteningLoading(true);
+  //     const shortCode = Math.random().toString(36).substr(2, 6);
+
+  //     const { error } = await supabase.from("short_urls").insert([
+  //       {
+  //         long_url: downloadUrl,
+  //         short_code: shortCode,
+  //         created_at: new Date().toISOString(),
+  //       },
+  //     ]);
+
+  //     if (error) throw error;
+
+  //     // Generate consistent short URLs
+  //     const shortUrl = `${window.location.origin}/portfoliomanagement/r/${shortCode}`;
+  //     setShortUrl(shortUrl);
+  //     toast.success("URL shortened successfully!");
+  //   } catch (error) {
+  //     console.error("Shortening error:", error);
+  //     toast.error(`Failed to shorten URL: ${error.message}`);
+  //   } finally {
+  //     setShorteningLoading(false);
+  //   }
+  // };
 
   // Update the return section
   return (
     <Box sx={{ maxWidth: 800, margin: "0 auto", p: 3 }}>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            padding: "16px",
+            borderRadius: "8px",
+            fontSize: "14px",
+          },
+          success: {
+            style: {
+              background: "#10B981",
+              color: "white",
+            },
+            iconTheme: {
+              primary: "white",
+              secondary: "#10B981",
+            },
+          },
+          error: {
+            style: {
+              background: "#EF4444",
+              color: "white",
+            },
+            iconTheme: {
+              primary: "white",
+              secondary: "#EF4444",
+            },
+          },
+          loading: {
+            style: {
+              background: "#1E293B",
+              color: "white",
+            },
+          },
+        }}
+      />
       <Paper
         sx={{
           borderRadius: 4,
@@ -342,6 +527,14 @@ const ImageUploadForm = () => {
                 }}
               />
 
+              <Box sx={styles.dimensionHelper}>
+                <InfoIcon sx={{ fontSize: 20 }} />
+                <Typography variant="body2">
+                  Recommended dimensions for project thumbnails: 5312 × 3072px
+                  (1.73:1 ratio)
+                </Typography>
+              </Box>
+
               {!downloadUrl && (
                 <Button
                   fullWidth
@@ -387,7 +580,7 @@ const ImageUploadForm = () => {
                   sx={styles.urlField}
                 />
                 <IconButton
-                  onClick={handleCopyUrl}
+                  onClick={() => handleCopyUrl(downloadUrl)}
                   sx={{
                     color: "#1E293B",
                     "&:hover": {
@@ -399,31 +592,6 @@ const ImageUploadForm = () => {
                 >
                   <ContentCopy />
                 </IconButton>
-              </Box>
-
-              <Box sx={{ mt: 3 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<LinkIcon />}
-                  onClick={handleShortenUrl}
-                  disabled={shorteningLoading}
-                  sx={{
-                    borderColor: "#E2E8F0",
-                    color: "#1E293B",
-                    "&:hover": {
-                      borderColor: "#94A3B8",
-                      bgcolor: "#F8FAFC",
-                      transform: "translateY(-2px)",
-                    },
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  {shorteningLoading ? (
-                    <CircularProgress size={24} />
-                  ) : (
-                    "Shorten URL"
-                  )}
-                </Button>
               </Box>
 
               {shortUrl && (
@@ -464,6 +632,78 @@ const ImageUploadForm = () => {
           )}
         </Box>
       </Paper>
+
+      {uploadedImages.length > 0 && (
+        <TableContainer component={Paper} sx={styles.tableContainer}>
+          <Table>
+            <TableHead>
+              <TableRow sx={styles.tableHeader}>
+                <TableCell sx={styles.tableHeaderCell}>Preview</TableCell>
+                <TableCell sx={styles.tableHeaderCell}>File Name</TableCell>
+                <TableCell sx={styles.tableHeaderCell}>URL</TableCell>
+                <TableCell sx={styles.tableHeaderCell}>Size</TableCell>
+                <TableCell sx={styles.tableHeaderCell} align="right">
+                  Actions
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {uploadedImages.map((image) => (
+                <TableRow key={image.id}>
+                  <TableCell sx={styles.imagePreviewCell}>
+                    <Box
+                      component="img"
+                      src={image.url}
+                      alt={image.name}
+                      sx={{
+                        width: 80,
+                        height: 80,
+                        objectFit: "cover",
+                        borderRadius: 1,
+                        transition: "transform 0.2s ease",
+                        "&:hover": {
+                          transform: "scale(1.05)",
+                        },
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>{image.name}</TableCell>
+                  <TableCell sx={styles.urlCell}>
+                    <Tooltip title={image.url}>
+                      <span>{image.url}</span>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>{formatFileSize(image.size)}</TableCell>
+                  <TableCell align="right">
+                    <Tooltip title="Copy URL">
+                      <IconButton
+                        onClick={() => handleCopyUrl(image.url)}
+                        sx={styles.actionButton}
+                      >
+                        <ContentCopyIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton
+                        onClick={() => handleDelete(image.path)}
+                        sx={{
+                          ...styles.actionButton,
+                          color: "#EF4444",
+                          "&:hover": {
+                            color: "#DC2626",
+                          },
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
     </Box>
   );
 };

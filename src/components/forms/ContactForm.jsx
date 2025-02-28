@@ -28,9 +28,9 @@ import {
   Save as SaveIcon,
   Close as CloseIcon,
 } from "@mui/icons-material";
-import { toast } from "react-toastify";
 import { supabase } from "../../config/supabase";
 import { contactsApi } from "../../api/SupabaseData";
+import { Toaster, toast } from "react-hot-toast";
 
 const formatDateTime = (dateString) => {
   const date = new Date(dateString);
@@ -194,6 +194,7 @@ const ContactForm = () => {
   };
 
   const handleSubmit = async () => {
+    const loadingToast = toast.loading("Saving contact...");
     try {
       if (editMode) {
         const { error } = await supabase
@@ -201,12 +202,14 @@ const ContactForm = () => {
           .update(currentContact)
           .eq("id", currentContact.id);
         if (error) throw error;
+        toast.dismiss(loadingToast);
         toast.success("Contact updated successfully!");
       } else {
         const { error } = await supabase
           .from("contacts")
           .insert([currentContact]);
         if (error) throw error;
+        toast.dismiss(loadingToast);
         toast.success("Contact added successfully!");
       }
 
@@ -214,6 +217,7 @@ const ContactForm = () => {
       fetchContacts();
       resetForm();
     } catch (error) {
+      toast.dismiss(loadingToast);
       toast.error("Error saving contact: " + error.message);
     }
   };
@@ -225,6 +229,7 @@ const ContactForm = () => {
   };
 
   const handleDelete = async () => {
+    const loadingToast = toast.loading("Deleting contact...");
     try {
       const { error } = await supabase
         .from("contacts")
@@ -233,10 +238,12 @@ const ContactForm = () => {
 
       if (error) throw error;
 
+      toast.dismiss(loadingToast);
       toast.success("Contact deleted successfully!");
       setDeleteDialogOpen(false);
       fetchContacts();
     } catch (error) {
+      toast.dismiss(loadingToast);
       toast.error("Error deleting contact: " + error.message);
     }
   };
@@ -593,6 +600,17 @@ const ContactForm = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            padding: "16px",
+            borderRadius: "8px",
+            fontSize: "14px",
+          },
+        }}
+      />
     </Box>
   );
 };

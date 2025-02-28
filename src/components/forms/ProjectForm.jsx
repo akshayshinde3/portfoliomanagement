@@ -33,13 +33,13 @@ import {
   PersonAdd as PersonAddIcon,
   Business as BusinessIcon,
 } from "@mui/icons-material";
-import { toast } from "react-toastify";
 import { supabase } from "../../config/supabase";
 import {
   projectsApi,
   projectMembersApi,
   projectAssociationsApi,
 } from "../../api/SupabaseData";
+import { Toaster, toast } from "react-hot-toast";
 
 const styles = {
   gradientHeader: {
@@ -299,6 +299,7 @@ const ProjectForm = () => {
 
   // Update the handleSubmit function to handle relations correctly
   const handleSubmit = async () => {
+    const loadingToast = toast.loading("Saving project...");
     try {
       if (!currentProject.title || !currentProject.description) {
         toast.error("Please fill in all required fields");
@@ -381,11 +382,13 @@ const ProjectForm = () => {
 
       await fetchProjects();
       handleClose();
+      toast.dismiss(loadingToast);
       toast.success(
         editMode ? "Project updated successfully" : "Project added successfully"
       );
     } catch (error) {
       console.error("Error saving:", error);
+      toast.dismiss(loadingToast);
       toast.error("Error saving: " + error.message);
     }
   };
@@ -416,26 +419,9 @@ const ProjectForm = () => {
   };
 
   // Update handleDelete function
-  const handleDelete = (projectId) => {
-    setItemToDelete({ id: projectId });
+  const handleDelete = (project) => {
+    setItemToDelete(project);
     setDeleteDialogOpen(true);
-  };
-
-  // Update handleConfirmDelete function
-  const handleConfirmDelete = async () => {
-    try {
-      const { error } = await supabase
-        .from("projects")
-        .delete()
-        .eq("id", itemToDelete.id); // Access the id property from itemToDelete object
-      if (error) throw error;
-      await fetchProjects();
-      toast.success("Project deleted successfully");
-      setDeleteDialogOpen(false);
-      setItemToDelete(null);
-    } catch (error) {
-      toast.error("Error deleting project: " + error.message);
-    }
   };
 
   const handleClose = () => {
@@ -649,6 +635,38 @@ const ProjectForm = () => {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    const loadingToast = toast.loading("Deleting project...");
+    try {
+      // First delete all associated members
+      await supabase.from("members").delete().eq("project_id", itemToDelete.id);
+
+      // Then delete all associated associations
+      await supabase
+        .from("associations")
+        .delete()
+        .eq("project_id", itemToDelete.id);
+
+      // Finally delete the project
+      const { error } = await supabase
+        .from("projects")
+        .delete()
+        .eq("id", itemToDelete.id);
+
+      if (error) throw error;
+
+      await fetchProjects();
+      toast.dismiss(loadingToast);
+      toast.success("Project deleted successfully");
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error("Error deleting project:", error);
+      toast.error("Error deleting project: " + error.message);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -662,6 +680,16 @@ const ProjectForm = () => {
         },
       }}
     >
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            padding: "16px",
+            borderRadius: "8px",
+            fontSize: "14px",
+          },
+        }}
+      />
       {/* Main Projects List */}
       <Paper
         sx={{
@@ -822,7 +850,7 @@ const ProjectForm = () => {
                             <EditIcon />
                           </IconButton>
                           <IconButton
-                            onClick={() => handleDelete(project.id)}
+                            onClick={() => handleDelete(project)}
                             sx={{
                               ...styles.iconButton,
                               color: "#dc2626", // Kept delete button red

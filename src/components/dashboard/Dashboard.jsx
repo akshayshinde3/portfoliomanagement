@@ -17,6 +17,7 @@ import ProjectForm from "../forms/ProjectForm";
 import EducationForm from "../forms/EducationForm";
 import ContactForm from "../forms/ContactForm";
 import ImageUploadForm from "../forms/ImageUploadForm";
+import StorageForm from "../forms/StorageForm";
 
 const Dashboard = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -45,6 +46,8 @@ const Dashboard = () => {
         return "Short URLs";
       case "image-upload":
         return "Image Upload";
+      case "storage":
+        return "Storage";
       default:
         return "Bio";
     }
@@ -104,6 +107,7 @@ const Dashboard = () => {
           <Route path="/education" element={<EducationForm />} />
           <Route path="/contacts" element={<ContactForm />} />
           <Route path="/image-upload" element={<ImageUploadForm />} />
+          <Route path="/storage" element={<StorageForm />} />
           <Route
             path="*"
             element={<Navigate to="/portfoliomanagement" replace />}

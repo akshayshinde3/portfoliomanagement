@@ -20,7 +20,8 @@ import SkillForm from "./components/forms/SkillForm.jsx";
 import Login from "./components/Login.jsx";
 import ContactForm from "./components/forms/ContactForm.jsx";
 import ImageUploadForm from "./components/forms/ImageUploadForm";
-import Redirect from "./components/Redirect";
+import StorageForm from "./components/forms/StorageForm";
+import Footer from "./components/Footer";
 
 import { supabase } from "./config/supabase";
 
@@ -84,26 +85,29 @@ const App = () => {
           component="main"
           sx={{
             flexGrow: 1,
-            p: 3,
+            display: "flex",
+            flexDirection: "column",
+            minHeight: "100vh",
             width: { sm: `calc(100% - ${280}px)` },
             mt: 8,
             backgroundColor: "#F8FAFC",
-            minHeight: "100vh",
           }}
         >
-          <Routes>
-            <Route path="/" element={<Navigate to="/bio" replace />} />
-            <Route path="/bio" element={<BioForm />} />
-            <Route path="/education" element={<EducationForm />} />
-            <Route path="/experience" element={<ExperienceForm />} />
-            <Route path="/projects" element={<ProjectForm />} />
-            <Route path="/skills" element={<SkillForm />} />
-            <Route path="/contacts" element={<ContactForm />} />
-            <Route path="/image-upload" element={<ImageUploadForm />} />
-            <Route path="/r/:shortCode" element={<Redirect />} />{" "}
-            {/* Update this path */}
-            <Route path="*" element={<Navigate to="/bio" replace />} />
-          </Routes>
+          <Box sx={{ p: 3, flexGrow: 1 }}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/bio" replace />} />
+              <Route path="/bio" element={<BioForm />} />
+              <Route path="/education" element={<EducationForm />} />
+              <Route path="/experience" element={<ExperienceForm />} />
+              <Route path="/projects" element={<ProjectForm />} />
+              <Route path="/skills" element={<SkillForm />} />
+              <Route path="/contacts" element={<ContactForm />} />
+              <Route path="/image-upload" element={<ImageUploadForm />} />
+              <Route path="/storage" element={<StorageForm />} />{" "}
+              <Route path="*" element={<Navigate to="/bio" replace />} />
+            </Routes>
+          </Box>
+          <Footer />
         </Box>
 
         <ToastContainer

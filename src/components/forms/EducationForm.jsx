@@ -22,10 +22,10 @@ import {
   Save as SaveIcon,
   Close as CloseIcon,
 } from "@mui/icons-material";
-import { toast } from "react-toastify";
 import { supabase } from "../../config/supabase";
 import dayjs from "dayjs";
 import { educationApi } from "../../api/SupabaseData";
+import { Toaster, toast } from "react-hot-toast";
 
 // Add these style constants at the top of your component
 const styles = {
@@ -153,6 +153,7 @@ const EducationForm = () => {
   };
 
   const handleSubmit = async () => {
+    const loadingToast = toast.loading("Saving education entry...");
     try {
       if (
         !currentEducation.school ||
@@ -187,6 +188,7 @@ const EducationForm = () => {
 
       await fetchEducations();
       handleClose();
+      toast.dismiss(loadingToast);
       toast.success(
         editMode
           ? "Education updated successfully"
@@ -194,30 +196,37 @@ const EducationForm = () => {
       );
     } catch (error) {
       console.error("Error details:", error);
+      toast.dismiss(loadingToast);
       toast.error("Error saving education: " + error.message);
     }
   };
 
-  const handleDelete = (educationId) => {
-    setItemToDelete({ id: educationId });
-    setDeleteDialogOpen(true);
-  };
-
-  // Update handleConfirmDelete function
   const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+
+    const loadingToast = toast.loading("Deleting education entry...");
     try {
       const { error } = await supabase
         .from("education")
         .delete()
-        .eq("id", itemToDelete.id); // Access the id property from itemToDelete object
+        .eq("id", itemToDelete.id);
+
       if (error) throw error;
+
       await fetchEducations();
+      toast.dismiss(loadingToast);
       toast.success("Education deleted successfully");
       setDeleteDialogOpen(false);
       setItemToDelete(null);
     } catch (error) {
-      toast.error("Error deleting education: " + error.message);
+      toast.dismiss(loadingToast);
+      toast.error(`Error deleting education: ${error.message}`);
     }
+  };
+
+  const handleDelete = (education) => {
+    setItemToDelete(education);
+    setDeleteDialogOpen(true);
   };
 
   const handleEdit = (education) => {
@@ -432,7 +441,7 @@ const EducationForm = () => {
                             <EditIcon />
                           </IconButton>
                           <IconButton
-                            onClick={() => handleDelete(education.id)}
+                            onClick={() => handleDelete(education)}
                             sx={{
                               ...styles.actionButton,
                               color: "#EF4444",
@@ -732,6 +741,17 @@ const EducationForm = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            padding: "16px",
+            borderRadius: "8px",
+            fontSize: "14px",
+          },
+        }}
+      />
     </Box>
   );
 };

@@ -17,9 +17,9 @@ import {
   Instagram as InstagramIcon,
   Description as ResumeIcon,
 } from "@mui/icons-material";
-import { toast } from "react-toastify";
 import { supabase } from "../../config/supabase";
 import { bioApi, copyrightApi } from "../../api/SupabaseData";
+import { Toaster, toast } from "react-hot-toast";
 
 const BioForm = () => {
   const [bio, setBio] = useState({
@@ -106,6 +106,7 @@ const BioForm = () => {
   };
 
   const handleSubmit = async () => {
+    const loadingToast = toast.loading("Updating bio...");
     try {
       if (!bio.name || !bio.description) {
         toast.error("Please fill in all required fields");
@@ -114,9 +115,11 @@ const BioForm = () => {
 
       await bioApi.update(bio);
       await fetchBio();
-      toast.success("Bio updated successfully");
+      toast.dismiss(loadingToast);
+      toast.success("Bio updated successfully!");
     } catch (error) {
-      toast.error("Error saving bio: " + error.message);
+      toast.dismiss(loadingToast);
+      toast.error(`Failed to update bio: ${error.message}`);
     }
   };
 
@@ -515,6 +518,16 @@ const BioForm = () => {
           </Box>
         </Box>
       </Paper>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            padding: "16px",
+            borderRadius: "8px",
+            fontSize: "14px",
+          },
+        }}
+      />
     </Box>
   );
 };

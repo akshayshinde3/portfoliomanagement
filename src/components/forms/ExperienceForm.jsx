@@ -23,9 +23,9 @@ import {
   Save as SaveIcon,
   Close as CloseIcon,
 } from "@mui/icons-material";
-import { toast } from "react-toastify";
 import { supabase } from "../../config/supabase";
 import { experienceApi } from "../../api/SupabaseData";
+import { Toaster, toast } from "react-hot-toast";
 
 const styles = {
   gradientHeader: {
@@ -113,6 +113,7 @@ const ExperienceForm = () => {
   };
 
   const handleSubmit = async () => {
+    const loadingToast = toast.loading("Saving experience...");
     try {
       if (!currentExperience.role || !currentExperience.company) {
         toast.error("Please fill in all required fields");
@@ -128,13 +129,14 @@ const ExperienceForm = () => {
 
       await fetchExperiences();
       handleClose();
+      toast.dismiss(loadingToast);
       toast.success(
         editMode
           ? "Experience updated successfully"
           : "Experience added successfully"
       );
     } catch (error) {
-      console.error("Error details:", error);
+      toast.dismiss(loadingToast);
       toast.error("Error saving experience: " + error.message);
     }
   };
@@ -151,6 +153,7 @@ const ExperienceForm = () => {
   };
 
   const handleConfirmDelete = async () => {
+    const loadingToast = toast.loading("Deleting experience...");
     try {
       const { error } = await supabase
         .from("experiences")
@@ -158,10 +161,12 @@ const ExperienceForm = () => {
         .eq("id", itemToDelete.id); // Access the id property from itemToDelete object
       if (error) throw error;
       await fetchExperiences();
+      toast.dismiss(loadingToast);
       toast.success("Experience deleted successfully");
       setDeleteDialogOpen(false);
       setItemToDelete(null);
     } catch (error) {
+      toast.dismiss(loadingToast);
       toast.error("Error deleting experience: " + error.message);
     }
   };
@@ -738,6 +743,17 @@ const ExperienceForm = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            padding: "16px",
+            borderRadius: "8px",
+            fontSize: "14px",
+          },
+        }}
+      />
     </Box>
   );
 };
