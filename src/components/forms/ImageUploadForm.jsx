@@ -15,8 +15,24 @@ import {
   TableRow,
   Tooltip,
   TablePagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
-import { CloudUpload, ContentCopy, Close, Delete } from "@mui/icons-material";
+import {
+  CloudUpload,
+  ContentCopy,
+  Close,
+  Delete,
+  Home as HomeIcon,
+  Folder as FolderIcon,
+  Close as CloseIcon,
+} from "@mui/icons-material";
 import { storage as configuredStorage } from "../../config/firebase";
 import {
   ref,
@@ -30,6 +46,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Toaster, toast } from "react-hot-toast";
 import { supabase } from "../../config/supabase";
 import LinkIcon from "@mui/icons-material/Link";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   ContentCopy as ContentCopyIcon,
   Delete as DeleteIcon,
@@ -248,6 +265,77 @@ const styles = {
   },
 };
 
+// Add these styles to your dialogStyles object
+const dialogStyles = {
+  // ...existing styles...
+  uploadArea: {
+    position: "relative",
+    width: "100%",
+    minHeight: 300,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 2,
+    border: "2px dashed #CBD5E1",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: "2rem",
+    transition: "all 0.2s ease",
+    cursor: "pointer",
+    "&:hover": {
+      borderColor: "#94A3B8",
+      backgroundColor: "#F1F5F9",
+      transform: "translateY(-2px)",
+    },
+  },
+  previewContainer: {
+    position: "relative",
+    width: "100%",
+    minHeight: 200,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 2,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    mb: 3,
+  },
+  previewImage: {
+    maxWidth: "100%",
+    maxHeight: "300px",
+    objectFit: "contain",
+    borderRadius: 2,
+    transition: "transform 0.3s ease",
+    "&:hover": {
+      transform: "scale(1.02)",
+    },
+  },
+  closeButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    bgcolor: "rgba(15, 23, 42, 0.7)",
+    color: "white",
+    backdropFilter: "blur(4px)",
+    "&:hover": {
+      bgcolor: "rgba(15, 23, 42, 0.9)",
+      transform: "scale(1.1)",
+    },
+    transition: "all 0.2s ease-in-out",
+  },
+  imageDimensions: {
+    position: "absolute",
+    bottom: 8,
+    left: 8,
+    bgcolor: "rgba(15, 23, 42, 0.7)",
+    color: "white",
+    padding: "4px 8px",
+    borderRadius: 1,
+    fontSize: "0.75rem",
+    backdropFilter: "blur(4px)",
+  },
+};
+
 // Add this helper function
 const formatFileSize = (bytes) => {
   if (bytes === 0) return "0 Bytes";
@@ -267,6 +355,10 @@ const ImageUploadForm = () => {
   const [imageName, setImageName] = useState("");
   const [dimensions, setDimensions] = useState(null);
   const [uploadedImages, setUploadedImages] = useState([]);
+  const [openFileDialog, setOpenFileDialog] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState("root");
+  const [folders, setFolders] = useState(["root"]); // Remove hardcoded folders
+  const [foldersLoading, setFoldersLoading] = useState(true);
 
   const getImageDimensions = (url) => {
     return new Promise((resolve) => {
@@ -295,6 +387,7 @@ const ImageUploadForm = () => {
     }
   };
 
+  // Update the handleUpload function to use the selected folder
   const handleUpload = async () => {
     if (!selectedFile) {
       toast.error("Please select an image to upload");
@@ -304,11 +397,21 @@ const ImageUploadForm = () => {
     const loadingToast = toast.loading("Uploading image...");
     try {
       setLoading(true);
+      const fileExtension = selectedFile.name.split(".").pop();
       const fileName = imageName.trim()
-        ? `${imageName.replace(/[^a-zA-Z0-9-_]/g, "-")}-${uuidv4()}`
-        : `${uuidv4()}-${selectedFile.name}`;
+        ? `${imageName.replace(/[^a-zA-Z0-9-_\s]/g, "-")}.${fileExtension}`
+        : selectedFile.name;
 
-      const fileRef = ref(configuredStorage, `uploads/${fileName}`);
+      const uniqueFileName = `${
+        fileName.split(".")[0]
+      }-${uuidv4()}.${fileExtension}`;
+
+      // Use selected folder in the path
+      const folderPath = selectedFolder === "root" ? "" : `${selectedFolder}/`;
+      const fileRef = ref(
+        configuredStorage,
+        `uploads/${folderPath}${uniqueFileName}`
+      );
 
       const metadata = {
         contentType: selectedFile.type,
@@ -316,6 +419,7 @@ const ImageUploadForm = () => {
           uploadedBy: "web-client",
           originalName: selectedFile.name,
           customName: imageName || "unnamed",
+          folder: selectedFolder,
         },
       };
 
@@ -323,21 +427,22 @@ const ImageUploadForm = () => {
       const url = await getDownloadURL(fileRef);
       setDownloadUrl(url);
 
-      // Add image to uploadedImages array once
       setUploadedImages((prev) => [
         ...prev,
         {
           id: Date.now(),
-          name: imageName || fileName,
+          name: fileName,
           url: url,
+          path: `uploads/${folderPath}${uniqueFileName}`,
           size: selectedFile.size,
           dimensions: dimensions,
+          folder: selectedFolder,
         },
       ]);
 
       toast.dismiss(loadingToast);
       toast.success("Image uploaded successfully!");
-      handleClear(); // Clear the form after successful upload
+      handleClear();
     } catch (error) {
       console.error("Upload error:", error);
       toast.dismiss(loadingToast);
@@ -379,6 +484,20 @@ const ImageUploadForm = () => {
     }
   };
 
+  const handleOpenFileDialog = () => {
+    setOpenFileDialog(true);
+  };
+
+  const handleCloseFileDialog = () => {
+    setOpenFileDialog(false);
+  };
+
+  const handleUploadFile = (event) => {
+    event.preventDefault();
+    handleUpload();
+    handleCloseFileDialog();
+  };
+
   // const handleShortenUrl = async () => {
   //   if (!downloadUrl) {
   //     toast.error("Please upload an image first");
@@ -410,6 +529,65 @@ const ImageUploadForm = () => {
   //     setShorteningLoading(false);
   //   }
   // };
+
+  // Add this function after the existing state declarations
+  const fetchBucketFolders = async () => {
+    const loadingToast = toast.loading("Fetching folders...");
+    try {
+      const storageRef = ref(configuredStorage);
+      const result = await listAll(storageRef);
+
+      // Get all items to check for folders
+      const fetchPromises = result.items.map(async (item) => {
+        const metadata = await getMetadata(item);
+        const fullPath = metadata.fullPath;
+        return fullPath.split("/")[0]; // Get the first level folder
+      });
+
+      // Get folders from prefixes
+      const prefixFolders = result.prefixes.map((prefix) => prefix.name);
+
+      // Combine and get unique folders
+      const itemFolders = await Promise.all(fetchPromises);
+      const allFolders = [...new Set([...prefixFolders, ...itemFolders])];
+
+      // Filter out empty strings and system folders
+      const validFolders = allFolders
+        .filter(
+          (folder) =>
+            folder && folder !== "undefined" && !folder.startsWith(".")
+        )
+        .sort();
+
+      // Always include root and ensure unique values
+      const finalFolders = ["root", ...validFolders];
+      setFolders(finalFolders);
+
+      toast.dismiss(loadingToast);
+      toast.success(`Found ${validFolders.length} folders`);
+    } catch (error) {
+      console.error("Error fetching folders:", error);
+      toast.dismiss(loadingToast);
+      toast.error(`Failed to load folders: ${error.message}`);
+    }
+  };
+
+  // Add useEffect to fetch folders when component mounts
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchFolders = async () => {
+      if (mounted) {
+        await fetchBucketFolders();
+      }
+    };
+
+    fetchFolders();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Update the return section
   return (
@@ -479,14 +657,9 @@ const ImageUploadForm = () => {
               variant="contained"
               startIcon={<CloudUpload />}
               sx={styles.uploadButton}
+              onClick={handleOpenFileDialog}
             >
               Select Image
-              <input
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={handleFileSelect}
-              />
             </Button>
           </Box>
         </Box>
@@ -517,11 +690,12 @@ const ImageUploadForm = () => {
 
               <TextField
                 fullWidth
-                label="Image Name (optional)"
+                label="Image Name"
                 value={imageName}
                 onChange={(e) => setImageName(e.target.value)}
                 sx={styles.nameField}
-                placeholder="Enter a custom name for your image"
+                placeholder="Enter the full image name (e.g., my-image)"
+                helperText="File extension will be added automatically"
                 InputProps={{
                   sx: { bgcolor: "white" },
                 }}
@@ -704,6 +878,140 @@ const ImageUploadForm = () => {
           </Table>
         </TableContainer>
       )}
+
+      <Dialog
+        open={openFileDialog}
+        onClose={handleCloseFileDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            overflow: "hidden",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+            color: "white",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Select Image
+            </Typography>
+            <IconButton onClick={handleCloseFileDialog} sx={{ color: "white" }}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2, px: 3, pb: 3 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <Box
+              component="label"
+              htmlFor="image-input"
+              sx={dialogStyles.uploadArea}
+            >
+              <CloudUpload sx={{ fontSize: 48, color: "#64748B", mb: 2 }} />
+              <Typography variant="h6" color="text.primary" sx={{ mb: 1 }}>
+                Click here to select an image
+              </Typography>
+              <Typography variant="caption" sx={{ mt: 2, color: "#94A3B8" }}>
+                Supported formats: PNG, JPG, GIF up to 10MB
+              </Typography>
+              <input
+                id="image-input"
+                type="file"
+                hidden
+                onChange={(e) => {
+                  handleFileSelect(e);
+                  handleCloseFileDialog();
+                }}
+                accept="image/*"
+              />
+            </Box>
+
+            <FormControl fullWidth>
+              <InputLabel>Destination Folder</InputLabel>
+              <Select
+                value={selectedFolder}
+                onChange={(e) => setSelectedFolder(e.target.value)}
+                label="Destination Folder"
+                disabled={foldersLoading}
+              >
+                <MenuItem value="root">
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <HomeIcon sx={{ color: "#64748B" }} />
+                    Root Folder
+                  </Box>
+                </MenuItem>
+                {folders
+                  .filter((f) => f !== "root")
+                  .map((folder) => (
+                    <MenuItem key={folder} value={folder}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <FolderIcon sx={{ color: "#64748B" }} />
+                        <Typography>{folder}</Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+              </Select>
+            </FormControl>
+
+            {/* Add a refresh button next to the folder select */}
+            <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+              <Button
+                size="small"
+                startIcon={<RefreshIcon />}
+                onClick={fetchBucketFolders}
+                sx={{
+                  color: "#64748B",
+                  "&:hover": {
+                    backgroundColor: "#F1F5F9",
+                  },
+                }}
+              >
+                Refresh Folders
+              </Button>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, backgroundColor: "#F8FAFC" }}>
+          <Button
+            onClick={handleCloseFileDialog}
+            variant="outlined"
+            sx={styles.cancelButton}
+          >
+            Cancel
+          </Button>
+          <Button
+            component="label"
+            htmlFor="image-input"
+            variant="contained"
+            sx={{
+              background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+              color: "white",
+              "&:hover": {
+                background: "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
+                transform: "translateY(-2px)",
+              },
+              transition: "all 0.2s ease-in-out",
+            }}
+          >
+            Select Image
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

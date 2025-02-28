@@ -469,6 +469,7 @@ const StorageForm = () => {
   };
 
   const handleDelete = (image) => {
+    // Pass the full image object instead of just the path
     setItemToDelete(image);
     setDeleteDialogOpen(true);
   };
@@ -476,9 +477,19 @@ const StorageForm = () => {
   const handleConfirmDelete = async () => {
     const loadingToast = toast.loading("Deleting file...");
     try {
+      if (!itemToDelete) {
+        throw new Error("No file selected for deletion");
+      }
+
+      // Create a reference using the full path
       const fileRef = ref(configuredStorage, itemToDelete.path);
+
+      // Delete the file
       await deleteObject(fileRef);
+
+      // Refresh the file list
       await fetchBucketImages();
+
       toast.dismiss(loadingToast);
       toast.success("File deleted successfully!");
       setDeleteDialogOpen(false);
@@ -988,7 +999,7 @@ const StorageForm = () => {
                         </Tooltip>
                         <Tooltip title="Delete">
                           <IconButton
-                            onClick={() => handleDelete(image.path)}
+                            onClick={() => handleDelete(image)} // Pass the full image object
                             sx={{
                               color: "#EF4444",
                               "&:hover": {
