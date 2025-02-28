@@ -564,7 +564,7 @@ const ImageUploadForm = () => {
       setFolders(finalFolders);
 
       toast.dismiss(loadingToast);
-      toast.success(`Found ${validFolders.length} folders`);
+      toast.success(`Found ${validFolders.length} Items`);
     } catch (error) {
       console.error("Error fetching folders:", error);
       toast.dismiss(loadingToast);
