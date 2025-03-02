@@ -6,9 +6,6 @@ import {
   ListItemIcon,
   ListItemText,
   Box,
-  useTheme,
-  useMediaQuery,
-  Divider,
 } from "@mui/material";
 import {
   Person as BioIcon,
@@ -18,7 +15,7 @@ import {
   Psychology as SkillIcon,
   ContactMail as ContactMailIcon,
   Image as ImageIcon,
-  Folder as FolderIcon, // Add this line
+  Folder as FolderIcon,
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -32,12 +29,10 @@ const menuItems = [
   { text: "Skills", icon: <SkillIcon />, path: "/skills" },
   { text: "Contacts", icon: <ContactMailIcon />, path: "/contacts" },
   { text: "Image Upload", icon: <ImageIcon />, path: "/image-upload" },
-  { text: "Storage", icon: <FolderIcon />, path: "/storage" }, // Add this line
+  { text: "Storage", icon: <FolderIcon />, path: "/storage" },
 ];
 
 const Sidebar = ({ mobileOpen, handleDrawerToggle }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const location = useLocation();
   const navigate = useNavigate();
 

@@ -84,9 +84,11 @@ const Header = ({ handleDrawerToggle, user }) => {
       position="fixed"
       sx={{
         zIndex: (theme) => theme.zIndex.drawer + 1,
-        background: "rgba(255, 255, 255, 0.95)",
-        backdropFilter: "blur(10px)",
-        boxShadow: "0 2px 20px rgba(0,0,0,0.05)",
+        background:
+          "linear-gradient(to right, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.95))",
+        backdropFilter: "blur(20px)",
+        boxShadow: "0 4px 30px rgba(0, 0, 0, 0.03)",
+        borderBottom: "1px solid rgba(241, 245, 249, 0.9)",
       }}
     >
       <Toolbar sx={{ minHeight: { xs: 64, sm: 70 } }}>
@@ -122,19 +124,31 @@ const Header = ({ handleDrawerToggle, user }) => {
             noWrap
             component="div"
             sx={{
-              background: "linear-gradient(135deg, #1E293B 0%, #334155 100%)",
+              background: "linear-gradient(135deg, #0F172A 0%, #334155 100%)",
               backgroundClip: "text",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
-              fontWeight: 700,
-              fontSize: { xs: "1rem", sm: "1.25rem" },
-              letterSpacing: "-0.01em",
+              fontWeight: 800,
+              fontSize: { xs: "1.1rem", sm: "1.35rem" },
+              letterSpacing: "-0.02em",
               display: "flex",
               alignItems: "center",
               gap: 2,
+              position: "relative",
+              "&:after": {
+                content: '""',
+                position: "absolute",
+                bottom: -2,
+                left: 0,
+                width: "40%",
+                height: "2px",
+                background:
+                  "linear-gradient(90deg, #0F172A 0%, transparent 100%)",
+                borderRadius: "2px",
+              },
             }}
           >
-            Akshay Shinde Portfolio Management
+            Akshay Sinde Portfolio Management
           </Typography>
 
           <Box
@@ -151,12 +165,17 @@ const Header = ({ handleDrawerToggle, user }) => {
                     display: "flex",
                     alignItems: "center",
                     gap: { xs: 1, sm: 2 },
-                    background: "rgba(30, 41, 59, 0.03)",
-                    padding: "6px 12px",
-                    borderRadius: "30px",
-                    transition: "all 0.2s ease",
+                    background:
+                      "linear-gradient(to right, rgba(30, 41, 59, 0.04), rgba(30, 41, 59, 0.02))",
+                    padding: "8px 16px",
+                    borderRadius: "16px",
+                    transition: "all 0.3s ease",
+                    border: "1px solid rgba(241, 245, 249, 0.9)",
                     "&:hover": {
-                      background: "rgba(30, 41, 59, 0.06)",
+                      background:
+                        "linear-gradient(to right, rgba(30, 41, 59, 0.06), rgba(30, 41, 59, 0.04))",
+                      transform: "translateY(-1px)",
+                      boxShadow: "0 4px 20px rgba(0, 0, 0, 0.03)",
                     },
                   }}
                 >
@@ -164,15 +183,15 @@ const Header = ({ handleDrawerToggle, user }) => {
                     src={getUserAvatar()}
                     alt={getUserDisplayName()}
                     sx={{
-                      width: { xs: 36, sm: 40 },
-                      height: { xs: 36, sm: 40 },
-                      border: "2px solid white",
+                      width: { xs: 38, sm: 42 },
+                      height: { xs: 38, sm: 42 },
+                      border: "3px solid white",
                       bgcolor: "#0D8ABC",
-                      boxShadow: "0 2px 8px rgba(13,138,188,0.2)",
-                      transition: "all 0.2s ease",
+                      boxShadow: "0 2px 12px rgba(13,138,188,0.25)",
+                      transition: "all 0.3s ease",
                       "&:hover": {
-                        transform: "scale(1.05)",
-                        boxShadow: "0 4px 12px rgba(13,138,188,0.3)",
+                        transform: "scale(1.08) rotate(5deg)",
+                        boxShadow: "0 4px 16px rgba(13,138,188,0.35)",
                       },
                     }}
                   />
@@ -206,20 +225,24 @@ const Header = ({ handleDrawerToggle, user }) => {
                   startIcon={<LogoutIcon />}
                   onClick={handleLogout}
                   sx={{
-                    borderColor: "#E2E8F0",
+                    borderColor: "rgba(226, 232, 240, 0.8)",
                     color: "#64748B",
-                    borderRadius: "25px",
+                    borderRadius: "12px",
                     px: { xs: 2, sm: 3 },
                     py: 1,
+                    backgroundColor: "rgba(255, 255, 255, 0.8)",
                     "&:hover": {
                       borderColor: "#CBD5E1",
                       backgroundColor: "#F8FAFC",
-                      transform: "translateY(-1px)",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                      transform: "translateY(-2px)",
+                      boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
                     },
                     textTransform: "none",
-                    transition: "all 0.2s ease",
-                    minWidth: { xs: 40, sm: "auto" },
+                    transition: "all 0.3s ease",
+                    minWidth: { xs: 42, sm: "auto" },
+                    height: 42,
+                    fontSize: "0.95rem",
+                    fontWeight: 500,
                   }}
                 >
                   {isMobile ? "" : "Logout"}

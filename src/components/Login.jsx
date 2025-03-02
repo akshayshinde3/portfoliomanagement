@@ -8,7 +8,6 @@ import {
   TextField,
   InputAdornment,
   IconButton,
-  Divider,
 } from "@mui/material";
 import {
   Login as LoginIcon,
@@ -138,7 +137,7 @@ const Login = () => {
           {/* Add Avatar here */}
           <Avatar
             src={avatarUrl}
-            alt="Akshay Shinde"
+            alt="Akshay Sinde"
             sx={{
               width: 120,
               height: 120,
@@ -181,7 +180,7 @@ const Login = () => {
               fontWeight: 500,
             }}
           >
-            Akshay Shinde Portfolio Management
+            Akshay Sinde Portfolio Management
           </Typography>
         </Box>
 

@@ -19,32 +19,54 @@ export const copyrightApi = {
   fetch: async () => {
     const { data, error } = await supabase
       .from("copyright")
-      .select("*")
+      .select("id, copyright")
       .single();
+
     if (error) throw error;
     return data;
   },
 
-  update: async (copyrightData) => {
-    const { error } = await supabase.from("copyright").upsert({
-      id: 1,
-      ...copyrightData,
-    });
+  update: async (copyrightText) => {
+    const { error } = await supabase
+      .from("copyright")
+      .update({ copyright: copyrightText })
+      .eq("id", 1);
+
     if (error) throw error;
+    return true;
   },
 };
 
 // Education API
 export const educationApi = {
-  fetchAll: async () => {
-    const { data, error } = await supabase.from("education").select("*");
+  fetch: async () => {
+    const { data, error } = await supabase
+      .from("education")
+      .select("*")
+      .order("id");
     if (error) throw error;
     return data;
   },
 
-  upsert: async (educationData) => {
-    const { error } = await supabase.from("education").upsert(educationData);
+  create: async (educationData) => {
+    const { data, error } = await supabase
+      .from("education")
+      .insert([educationData])
+      .select()
+      .single();
     if (error) throw error;
+    return data;
+  },
+
+  update: async (id, updateData) => {
+    const { data, error } = await supabase
+      .from("education")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
 
   delete: async (id) => {
@@ -55,15 +77,35 @@ export const educationApi = {
 
 // Experience API
 export const experienceApi = {
-  fetchAll: async () => {
-    const { data, error } = await supabase.from("experiences").select("*");
+  fetch: async () => {
+    const { data, error } = await supabase
+      .from("experiences")
+      .select("*")
+      .order("id");
     if (error) throw error;
     return data;
   },
 
-  upsert: async (experienceData) => {
-    const { error } = await supabase.from("experiences").upsert(experienceData);
+  create: async (experienceData) => {
+    const { data, error } = await supabase
+      .from("experiences")
+      .insert([experienceData])
+      .select()
+      .single();
     if (error) throw error;
+    return data;
+  },
+
+  update: async (experienceData) => {
+    const { id, ...updateData } = experienceData;
+    const { data, error } = await supabase
+      .from("experiences")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
 
   delete: async (id) => {
@@ -91,13 +133,55 @@ export const skillsApi = {
     return data;
   },
 
-  upsert: async (skillData) => {
-    const { error } = await supabase.from("skills").upsert(skillData);
+  fetchWithCategories: async () => {
+    const { data, error } = await supabase
+      .from("skills")
+      .select(
+        `
+        *,
+        skill_categories (
+          id,
+          title
+        )
+      `
+      )
+      .order("name");
     if (error) throw error;
+    return data;
+  },
+
+  create: async (skillData) => {
+    const { data, error } = await supabase
+      .from("skills")
+      .insert([skillData])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  update: async (skillData) => {
+    const { id, ...updateData } = skillData;
+    const { data, error } = await supabase
+      .from("skills")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
 
   delete: async (id) => {
     const { error } = await supabase.from("skills").delete().eq("id", id);
+    if (error) throw error;
+  },
+
+  updateCategoryNull: async (categoryId) => {
+    const { error } = await supabase
+      .from("skills")
+      .update({ category_id: null })
+      .eq("category_id", categoryId);
     if (error) throw error;
   },
 };
@@ -113,11 +197,35 @@ export const skillCategoriesApi = {
     return data;
   },
 
-  upsert: async (categoryData) => {
-    const { error } = await supabase
+  fetch: async () => {
+    const { data, error } = await supabase
       .from("skill_categories")
-      .upsert(categoryData);
+      .select("*")
+      .order("title");
     if (error) throw error;
+    return data;
+  },
+
+  create: async (categoryData) => {
+    const { data, error } = await supabase
+      .from("skill_categories")
+      .insert([categoryData])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  update: async (categoryData) => {
+    const { id, ...updateData } = categoryData;
+    const { data, error } = await supabase
+      .from("skill_categories")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
 
   delete: async (id) => {
@@ -131,16 +239,35 @@ export const skillCategoriesApi = {
 
 // Projects API
 export const projectsApi = {
-  fetchAll: async () => {
-    const { data, error } = await supabase.from("projects").select("*");
+  fetch: async () => {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*")
+      .order("id");
     if (error) throw error;
     return data;
   },
 
-  upsert: async (projectData) => {
-    const { error } = await supabase.from("projects").upsert(projectData);
+  create: async (projectData) => {
+    const { data, error } = await supabase
+      .from("projects")
+      .insert([projectData])
+      .select()
+      .single();
     if (error) throw error;
-    return error;
+    return data;
+  },
+
+  update: async (projectData) => {
+    const { id, ...updateData } = projectData;
+    const { data, error } = await supabase
+      .from("projects")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
 
   delete: async (id) => {
@@ -151,7 +278,7 @@ export const projectsApi = {
 
 // Project Members API
 export const projectMembersApi = {
-  fetchByProject: async (projectId) => {
+  fetchByProjectId: async (projectId) => {
     const { data, error } = await supabase
       .from("members")
       .select("*")
@@ -160,20 +287,32 @@ export const projectMembersApi = {
     return data;
   },
 
-  upsert: async (memberData) => {
-    const { error } = await supabase.from("members").upsert(memberData);
+  createMany: async (members) => {
+    const { data, error } = await supabase
+      .from("members")
+      .insert(members)
+      .select();
     if (error) throw error;
+    return data;
   },
 
   delete: async (id) => {
     const { error } = await supabase.from("members").delete().eq("id", id);
     if (error) throw error;
   },
+
+  deleteByProjectId: async (projectId) => {
+    const { error } = await supabase
+      .from("members")
+      .delete()
+      .eq("project_id", projectId);
+    if (error) throw error;
+  },
 };
 
 // Project Associations API
 export const projectAssociationsApi = {
-  fetchByProject: async (projectId) => {
+  fetchByProjectId: async (projectId) => {
     const { data, error } = await supabase
       .from("associations")
       .select("*")
@@ -182,22 +321,32 @@ export const projectAssociationsApi = {
     return data;
   },
 
-  upsert: async (associationData) => {
-    const { error } = await supabase
+  createMany: async (associations) => {
+    const { data, error } = await supabase
       .from("associations")
-      .upsert(associationData);
+      .insert(associations)
+      .select();
     if (error) throw error;
+    return data;
   },
 
   delete: async (id) => {
     const { error } = await supabase.from("associations").delete().eq("id", id);
     if (error) throw error;
   },
+
+  deleteByProjectId: async (projectId) => {
+    const { error } = await supabase
+      .from("associations")
+      .delete()
+      .eq("project_id", projectId);
+    if (error) throw error;
+  },
 };
 
 // Contacts API
 export const contactsApi = {
-  fetchAll: async () => {
+  fetch: async () => {
     const { data, error } = await supabase
       .from("contacts")
       .select("*")
@@ -206,13 +355,67 @@ export const contactsApi = {
     return data;
   },
 
-  upsert: async (contactData) => {
-    const { error } = await supabase.from("contacts").upsert(contactData);
+  create: async (contactData) => {
+    const { data, error } = await supabase
+      .from("contacts")
+      .insert([contactData])
+      .select()
+      .single();
     if (error) throw error;
+    return data;
+  },
+
+  update: async (contactData) => {
+    const { id, created_at, ...updateData } = contactData;
+    const { data, error } = await supabase
+      .from("contacts")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   },
 
   delete: async (id) => {
     const { error } = await supabase.from("contacts").delete().eq("id", id);
+    if (error) throw error;
+  },
+};
+
+// Project Category API
+export const projectCategoryApi = {
+  fetch: async () => {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("category")
+      .not("category", "is", null);
+    if (error) throw error;
+    return data;
+  },
+
+  create: async (category) => {
+    const { data, error } = await supabase
+      .from("projects")
+      .insert([{ category }]);
+    if (error) throw error;
+    return data;
+  },
+
+  update: async ({ oldCategory, newCategory }) => {
+    const { data, error } = await supabase
+      .from("projects")
+      .update({ category: newCategory })
+      .eq("category", oldCategory);
+    if (error) throw error;
+    return data;
+  },
+
+  delete: async (category) => {
+    const { error } = await supabase
+      .from("projects")
+      .update({ category: null })
+      .eq("category", category);
     if (error) throw error;
   },
 };

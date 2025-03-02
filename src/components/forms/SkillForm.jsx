@@ -23,10 +23,16 @@ import {
   Delete as DeleteIcon,
   Save as SaveIcon,
   Close as CloseIcon,
+  CheckCircleOutline as SuccessIcon,
+  ErrorOutline as ErrorIcon,
+  Sync as LoadingIcon,
+  Code as CodeIcon,
 } from "@mui/icons-material";
-import { supabase } from "../../config/supabase";
 import { skillsApi, skillCategoriesApi } from "../../api/SupabaseData";
 import { Toaster, toast } from "react-hot-toast";
+import { styled } from "@mui/system";
+import { motion } from "framer-motion";
+import { useScrollLock } from "../../hooks/useScrollLock";
 
 const styles = {
   gradientHeader: {
@@ -163,7 +169,99 @@ const styles = {
       background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
     },
   },
+  dialogContent: {
+    p: 3,
+    background:
+      "linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%)",
+  },
 };
+
+const toastConfig = {
+  position: "top-center",
+  style: {
+    background: "rgba(15, 23, 42, 0.95)",
+    color: "white",
+    backdropFilter: "blur(8px)",
+    borderRadius: "16px",
+    padding: "16px 24px",
+    maxWidth: "500px",
+    width: "90%",
+    border: "1px solid rgba(255,255,255,0.1)",
+    fontSize: "14px",
+    fontWeight: 500,
+    boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+  },
+  success: {
+    icon: (
+      <SuccessIcon
+        sx={{
+          animation: "rotate 0.5s ease-out",
+          "@keyframes rotate": {
+            "0%": { transform: "scale(0.5) rotate(-180deg)" },
+            "100%": { transform: "scale(1) rotate(0)" },
+          },
+        }}
+      />
+    ),
+    duration: 2000,
+  },
+  error: {
+    icon: (
+      <ErrorIcon
+        sx={{
+          animation: "shake 0.5s ease-in-out",
+          "@keyframes shake": {
+            "0%, 100%": { transform: "translateX(0)" },
+            "25%": { transform: "translateX(-4px)" },
+            "75%": { transform: "translateX(4px)" },
+          },
+        }}
+      />
+    ),
+    duration: 3000,
+  },
+  loading: {
+    icon: (
+      <LoadingIcon
+        sx={{
+          animation: "spin 1s linear infinite",
+          "@keyframes spin": {
+            "0%": { transform: "rotate(0deg)" },
+            "100%": { transform: "rotate(360deg)" },
+          },
+        }}
+      />
+    ),
+  },
+};
+
+const StyledDialog = styled(Dialog)`
+  .MuiDialog-paper {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(241, 245, 249, 0.2);
+    border-radius: 24px;
+    box-shadow: rgb(0 0 0 / 8%) 0px 20px 40px, rgb(0 0 0 / 6%) 0px 1px 3px;
+    overflow: hidden;
+  }
+`;
+
+const StyledDialogTitle = styled(DialogTitle)(({ theme }) => ({
+  background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+  color: "white",
+  padding: "24px",
+  position: "relative",
+  "&::after": {
+    content: '""',
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "1px",
+    background:
+      "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
+  },
+}));
 
 const SkillForm = () => {
   const [skills, setSkills] = useState([]);
@@ -183,6 +281,7 @@ const SkillForm = () => {
   const [categoryDeleteDialogOpen, setCategoryDeleteDialogOpen] =
     useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const { enableBodyScroll, disableBodyScroll } = useScrollLock();
 
   useEffect(() => {
     fetchCategories();
@@ -190,82 +289,67 @@ const SkillForm = () => {
   }, []);
 
   const fetchCategories = async () => {
+    const loadingToast = toast.loading("Loading categories...", toastConfig);
     try {
-      const { data, error } = await supabase
-        .from("skill_categories")
-        .select("*")
-        .order("title");
-
-      if (error) throw error;
+      const data = await skillCategoriesApi.fetch();
       setCategories(data || []);
+      toast.dismiss(loadingToast);
+      toast.success("Categories loaded successfully", toastConfig);
     } catch (error) {
+      toast.dismiss(loadingToast);
       console.error("Error fetching categories:", error);
-      toast.error("Error fetching categories: " + error.message);
+      toast.error("Error fetching categories: " + error.message, toastConfig);
     }
   };
 
   const fetchSkills = async () => {
+    const loadingToast = toast.loading("Loading skills...", toastConfig);
     try {
-      const { data, error } = await supabase
-        .from("skills")
-        .select(
-          `
-          id,
-          name,
-          image,
-          category_id,
-          skill_categories (
-            id,
-            title
-          )
-        `
-        )
-        .order("name");
-
-      if (error) throw error;
-
-      const processedSkills =
-        data?.map((skill) => ({
-          ...skill,
-          categoryTitle: skill.skill_categories?.title,
-        })) || [];
-
-      setSkills(processedSkills);
+      const data = await skillsApi.fetchWithCategories();
+      setSkills(data || []);
+      toast.dismiss(loadingToast);
+      toast.success("Skills loaded successfully", toastConfig);
     } catch (error) {
+      toast.dismiss(loadingToast);
       console.error("Error fetching skills:", error);
-      toast.error("Error fetching skills: " + error.message);
+      toast.error("Error fetching skills: " + error.message, toastConfig);
     }
   };
 
-  const handleSubmit = async (values) => {
-    const loadingToast = toast.loading("Saving skill...");
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const loadingToast = toast.loading("Saving skill...", toastConfig);
+
     try {
       if (!currentSkill.name || !currentSkill.category_id) {
-        toast.error("Please fill in required fields (Name and Category)");
+        toast.dismiss(loadingToast);
+        toast.error("Please fill in all required fields", toastConfig);
         return;
       }
 
       const skillData = {
         name: currentSkill.name.trim(),
         category_id: currentSkill.category_id,
-        image: currentSkill.image?.trim() || null,
-        id: editMode ? currentSkill.id : undefined,
+        image: currentSkill.image || null,
       };
 
-      const { error } = await supabase.from("skills").upsert(skillData);
-
-      if (error) throw error;
+      if (editMode) {
+        skillData.id = currentSkill.id;
+        await skillsApi.update(skillData);
+      } else {
+        await skillsApi.create(skillData);
+      }
 
       await fetchSkills();
       handleClose();
       toast.dismiss(loadingToast);
       toast.success(
-        editMode ? "Skill updated successfully" : "Skill added successfully"
+        editMode ? "Skill updated successfully" : "Skill added successfully",
+        toastConfig
       );
     } catch (error) {
       toast.dismiss(loadingToast);
-      console.error("Error saving skill:", error);
-      toast.error("Error saving skill: " + error.message);
+      toast.error("Error saving skill: " + error.message, toastConfig);
     }
   };
 
@@ -275,30 +359,29 @@ const SkillForm = () => {
     setOpen(true);
   };
 
-  const handleDelete = (skill) => {
-    setItemToDelete(skill);
+  const handleDelete = (item) => {
+    setItemToDelete(item);
     setDeleteDialogOpen(true);
+    disableBodyScroll();
+  };
+
+  const handleCloseDelete = () => {
+    setDeleteDialogOpen(false);
+    setItemToDelete(null);
+    enableBodyScroll();
   };
 
   const handleConfirmDelete = async () => {
-    const loadingToast = toast.loading("Deleting skill...");
+    const loadingToast = toast.loading("Deleting skill...", toastConfig);
     try {
-      const { error } = await supabase
-        .from("skills")
-        .delete()
-        .eq("id", itemToDelete.id);
-
-      if (error) throw error;
-
+      await skillsApi.delete(itemToDelete.id);
       await fetchSkills();
       toast.dismiss(loadingToast);
-      toast.success("Skill deleted successfully");
-      setDeleteDialogOpen(false);
-      setItemToDelete(null);
+      toast.success("Skill deleted successfully", toastConfig);
+      handleCloseDelete(); // Use this instead of setDeleteDialogOpen(false)
     } catch (error) {
       toast.dismiss(loadingToast);
-      console.error("Error deleting skill:", error);
-      toast.error("Error deleting skill: " + error.message);
+      toast.error("Error deleting skill: " + error.message, toastConfig);
     }
   };
 
@@ -313,29 +396,37 @@ const SkillForm = () => {
   };
 
   const handleCategorySubmit = async () => {
+    const loadingToast = toast.loading("Saving category...", toastConfig);
     try {
       if (!currentCategory.title) {
-        toast.error("Please enter a category title");
+        toast.dismiss(loadingToast);
+        toast.error("Please enter a category title", toastConfig);
         return;
       }
 
-      const { error } = await supabase.from("skill_categories").upsert({
-        id: editingCategory ? currentCategory.id : undefined,
-        title: currentCategory.title.trim(),
-      });
-
-      if (error) throw error;
+      if (editingCategory) {
+        await skillCategoriesApi.update({
+          id: currentCategory.id,
+          title: currentCategory.title.trim(),
+        });
+      } else {
+        await skillCategoriesApi.create({
+          title: currentCategory.title.trim(),
+        });
+      }
 
       await fetchCategories();
       handleCategoryClose();
+      toast.dismiss(loadingToast);
       toast.success(
         editingCategory
           ? "Category updated successfully"
-          : "Category added successfully"
+          : "Category added successfully",
+        toastConfig
       );
     } catch (error) {
-      console.error("Error saving category:", error);
-      toast.error("Error saving category: " + error.message);
+      toast.dismiss(loadingToast);
+      toast.error("Error saving category: " + error.message, toastConfig);
     }
   };
 
@@ -348,31 +439,28 @@ const SkillForm = () => {
   const handleDeleteCategory = (categoryId, skillCount) => {
     setCategoryToDelete({ id: categoryId, skillCount });
     setCategoryDeleteDialogOpen(true);
+    disableBodyScroll();
+  };
+
+  const handleCloseCategoryDelete = () => {
+    setCategoryDeleteDialogOpen(false);
+    setCategoryToDelete(null);
+    enableBodyScroll();
   };
 
   const handleConfirmCategoryDelete = async () => {
+    const loadingToast = toast.loading("Deleting category...", toastConfig);
     try {
-      const { error: updateError } = await supabase
-        .from("skills")
-        .update({ category_id: null })
-        .eq("category_id", categoryToDelete.id);
-
-      if (updateError) throw updateError;
-
-      const { error: deleteError } = await supabase
-        .from("skill_categories")
-        .delete()
-        .eq("id", categoryToDelete.id);
-
-      if (deleteError) throw deleteError;
-
+      await skillsApi.updateCategoryNull(categoryToDelete.id);
+      await skillCategoriesApi.delete(categoryToDelete.id);
       await fetchCategories();
       await fetchSkills();
-      toast.success("Category deleted successfully");
-      setCategoryDeleteDialogOpen(false);
-      setCategoryToDelete(null);
+      toast.dismiss(loadingToast);
+      toast.success("Category deleted successfully", toastConfig);
+      handleCloseCategoryDelete(); // Use this instead of direct setState calls
     } catch (error) {
-      toast.error("Error deleting category: " + error.message);
+      toast.dismiss(loadingToast);
+      toast.error("Error deleting category: " + error.message, toastConfig);
     }
   };
 
@@ -487,7 +575,7 @@ const SkillForm = () => {
                             </IconButton>
                             <IconButton
                               size="small"
-                              onClick={() => handleDelete(skill)} // Pass the entire skill object instead of just skill.id
+                              onClick={() => handleDelete(skill)}
                               sx={{
                                 color: "#EF4444",
                                 transition: "all 0.2s ease",
@@ -612,7 +700,14 @@ const SkillForm = () => {
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleDeleteCategory(category.id)}
+                        onClick={() =>
+                          handleDeleteCategory(
+                            category.id,
+                            skills.filter(
+                              (skill) => skill.category_id === category.id
+                            ).length
+                          )
+                        }
                         sx={{
                           color: "#EF4444",
                           transition: "all 0.2s ease",
@@ -881,41 +976,144 @@ const SkillForm = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog
+      <StyledDialog
         open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
+        onClose={handleCloseDelete}
         maxWidth="sm"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-            overflow: "hidden",
-          },
-        }}
+        TransitionComponent={motion.div}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        disableScrollLock={false}
       >
-        <DialogTitle sx={styles.dialogHeader}>
-          <Box sx={styles.dialogHeaderContent}>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Delete Skill
-            </Typography>
+        <StyledDialogTitle>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <DeleteIcon sx={{ color: "#EF4444" }} />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Delete Skill
+              </Typography>
+            </Box>
             <IconButton
-              onClick={() => setDeleteDialogOpen(false)}
-              sx={styles.dialogCloseButton}
+              onClick={handleCloseDelete}
+              sx={{
+                color: "white",
+                "&:hover": {
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  transform: "rotate(90deg)",
+                },
+                transition: "all 0.3s ease",
+              }}
             >
               <CloseIcon />
             </IconButton>
           </Box>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3, pt: 4 }}>
-          <Typography>Are you sure you want to delete this skill?</Typography>
-          <Typography variant="body2" sx={{ color: "#64748B", mt: 1 }}>
-            This action cannot be undone.
-          </Typography>
+        </StyledDialogTitle>
+
+        <DialogContent sx={styles.dialogContent}>
+          {itemToDelete && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2.5,
+                  mb: 3,
+                  p: 3,
+                  borderRadius: 2,
+                  backgroundColor: "rgba(241, 245, 249, 0.5)",
+                  backdropFilter: "blur(8px)",
+                }}
+              >
+                <Box sx={{ display: "flex", gap: 2.5 }}>
+                  <Box
+                    sx={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 2,
+                      backgroundColor: "#F8FAFC",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    {itemToDelete.image ? (
+                      <Box
+                        component="img"
+                        src={itemToDelete.image}
+                        alt={itemToDelete.name}
+                        sx={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                          p: 1,
+                        }}
+                      />
+                    ) : (
+                      <CodeIcon sx={{ fontSize: 32, color: "#94A3B8" }} />
+                    )}
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{ fontWeight: 600, color: "#1E293B", mb: 0.5 }}
+                    >
+                      {itemToDelete.name}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: "#64748B" }}>
+                      Category:{" "}
+                      {categories.find((c) => c.id === itemToDelete.category_id)
+                        ?.title || "Uncategorized"}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              <Typography
+                variant="body1"
+                sx={{ color: "#1E293B", mb: 2, fontWeight: 500 }}
+              >
+                Are you sure you want to delete this skill?
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "#64748B",
+                  p: 2,
+                  borderRadius: 2,
+                  backgroundColor: "rgba(239, 68, 68, 0.1)",
+                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                }}
+              >
+                ⚠️ This action cannot be undone. The skill will be permanently
+                removed.
+              </Typography>
+            </motion.div>
+          )}
         </DialogContent>
-        <DialogActions sx={{ p: 3, backgroundColor: "#F8FAFC" }}>
+
+        <DialogActions
+          sx={{
+            p: 3,
+            backgroundColor: "#F8FAFC",
+            borderTop: "1px solid rgba(226, 232, 240, 0.8)",
+          }}
+        >
           <Button
-            onClick={() => setDeleteDialogOpen(false)}
+            onClick={handleCloseDelete}
             variant="outlined"
             sx={styles.cancelButton}
           >
@@ -926,30 +1124,23 @@ const SkillForm = () => {
             variant="contained"
             sx={styles.deleteButton}
           >
-            Delete
+            Delete Skill
           </Button>
         </DialogActions>
-      </Dialog>
+      </StyledDialog>
 
-      <Dialog
+      <StyledDialog
         open={categoryDeleteDialogOpen}
-        onClose={() => setCategoryDeleteDialogOpen(false)}
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-            overflow: "hidden",
-          },
-        }}
+        onClose={handleCloseCategoryDelete}
+        maxWidth="sm"
+        fullWidth
+        TransitionComponent={motion.div}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        disableScrollLock={false}
       >
-        <DialogTitle
-          sx={{
-            background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
-            color: "white",
-            px: 3,
-            py: 2,
-          }}
-        >
+        <StyledDialogTitle>
           <Box
             sx={{
               display: "flex",
@@ -957,77 +1148,133 @@ const SkillForm = () => {
               alignItems: "center",
             }}
           >
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Delete Category
-            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <DeleteIcon sx={{ color: "#EF4444" }} />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Delete Category
+              </Typography>
+            </Box>
             <IconButton
-              onClick={() => setCategoryDeleteDialogOpen(false)}
+              onClick={handleCloseCategoryDelete}
               sx={{
                 color: "white",
-                "&:hover": { backgroundColor: "rgba(255,255,255,0.1)" },
+                "&:hover": {
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                  transform: "rotate(90deg)",
+                },
+                transition: "all 0.3s ease",
               }}
             >
               <CloseIcon />
             </IconButton>
           </Box>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3, pt: 4 }}>
-          <Typography>
-            Are you sure you want to delete this category?
-          </Typography>
-          {categoryToDelete?.skillCount > 0 && (
-            <Typography sx={{ color: "#EF4444", mt: 1 }}>
-              This category contains {categoryToDelete.skillCount} skills. These
-              skills will be uncategorized.
-            </Typography>
+        </StyledDialogTitle>
+
+        <DialogContent sx={styles.dialogContent}>
+          {categoryToDelete && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2.5,
+                  mb: 3,
+                  p: 3,
+                  borderRadius: 2,
+                  backgroundColor: "rgba(241, 245, 249, 0.5)",
+                  backdropFilter: "blur(8px)",
+                }}
+              >
+                <Box>
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 600, color: "#1E293B", mb: 1 }}
+                  >
+                    {
+                      categories.find((c) => c.id === categoryToDelete.id)
+                        ?.title
+                    }
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: "#64748B" }}>
+                    {categoryToDelete.skillCount} skills in this category
+                  </Typography>
+                </Box>
+
+                {categoryToDelete.skillCount > 0 && (
+                  <Box
+                    sx={{
+                      mt: 2,
+                      p: 2,
+                      borderRadius: 2,
+                      backgroundColor: "rgba(239, 68, 68, 0.1)",
+                      border: "1px solid rgba(239, 68, 68, 0.2)",
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ color: "#EF4444" }}>
+                      ⚠️ This category contains {categoryToDelete.skillCount}{" "}
+                      skills. These skills will be uncategorized.
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+
+              <Typography
+                variant="body1"
+                sx={{ color: "#1E293B", mb: 2, fontWeight: 500 }}
+              >
+                Are you sure you want to delete this category?
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "#64748B",
+                  p: 2,
+                  borderRadius: 2,
+                  backgroundColor: "rgba(239, 68, 68, 0.1)",
+                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                }}
+              >
+                ⚠️ This action cannot be undone. The category will be
+                permanently removed.
+              </Typography>
+            </motion.div>
           )}
-          <Typography variant="body2" sx={{ color: "#64748B", mt: 1 }}>
-            This action cannot be undone.
-          </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 3, backgroundColor: "#F8FAFC" }}>
+
+        <DialogActions
+          sx={{
+            p: 3,
+            backgroundColor: "#F8FAFC",
+            borderTop: "1px solid rgba(226, 232, 240, 0.8)",
+          }}
+        >
           <Button
-            onClick={() => setCategoryDeleteDialogOpen(false)}
+            onClick={handleCloseCategoryDelete}
             variant="outlined"
-            sx={{
-              borderColor: "#E2E8F0",
-              color: "#64748B",
-              "&:hover": {
-                borderColor: "#CBD5E1",
-                backgroundColor: "#F1F5F9",
-              },
-            }}
+            sx={styles.cancelButton}
           >
             Cancel
           </Button>
           <Button
             onClick={handleConfirmCategoryDelete}
             variant="contained"
-            sx={{
-              background: "linear-gradient(135deg, #DC2626 0%, #EF4444 100%)",
-              color: "white",
-              px: 3,
-              py: 1,
-              borderRadius: 2,
-              textTransform: "none",
-              "&:hover": {
-                background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
-              },
-            }}
+            sx={styles.deleteButton}
           >
-            Delete
+            Delete Category
           </Button>
         </DialogActions>
-      </Dialog>
+      </StyledDialog>
       <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            padding: "16px",
-            borderRadius: "8px",
-            fontSize: "14px",
-          },
+        position="top-center"
+        toastOptions={toastConfig}
+        containerStyle={{
+          top: 20,
         }}
+        gutter={8}
       />
     </Box>
   );
