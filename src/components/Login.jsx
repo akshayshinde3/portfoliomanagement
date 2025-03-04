@@ -137,7 +137,7 @@ const Login = () => {
           {/* Add Avatar here */}
           <Avatar
             src={avatarUrl}
-            alt="Akshay Sinde"
+            alt="Akshay Shinde"
             sx={{
               width: 120,
               height: 120,
@@ -180,7 +180,7 @@ const Login = () => {
               fontWeight: 500,
             }}
           >
-            Akshay Sinde Portfolio Management
+            Akshay Shinde Portfolio Management
           </Typography>
         </Box>
 

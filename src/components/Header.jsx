@@ -148,7 +148,7 @@ const Header = ({ handleDrawerToggle, user }) => {
               },
             }}
           >
-            Akshay Sinde Portfolio Management
+            Akshay Shinde Portfolio Management
           </Typography>
 
           <Box
