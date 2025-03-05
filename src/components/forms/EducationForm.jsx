@@ -33,7 +33,6 @@ import { Warning as WarningIcon } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { useScrollLock } from "../../hooks/useScrollLock";
 
-// Add these responsive styles to your existing styles object
 const styles = {
   gradientText: {
     background: "linear-gradient(135deg, #E2E8F0 0%, #FFFFFF 100%)",
