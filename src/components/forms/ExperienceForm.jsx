@@ -31,7 +31,7 @@ import {
 import { experienceApi } from "../../api/SupabaseData";
 import { Toaster, toast } from "react-hot-toast";
 import { styled } from "@mui/material/styles";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useScrollLock } from "../../hooks/useScrollLock";
 
 const StyledDialog = styled(Dialog)`
@@ -274,6 +274,22 @@ const toastConfig = {
   },
 };
 
+// Add this near your other styles
+const chipStyles = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: { xs: 1, sm: 1.5 },
+  mt: 2,
+  "& .MuiChip-root": {
+    height: { xs: 32, sm: 36 },
+    borderRadius: { xs: "10px", sm: "12px" },
+    fontSize: { xs: "0.813rem", sm: "0.875rem" },
+    "& .MuiChip-label": {
+      px: { xs: 2, sm: 3 },
+    },
+  },
+};
+
 const ExperienceForm = () => {
   const { enableBodyScroll, disableBodyScroll } = useScrollLock();
   const [experiences, setExperiences] = useState([]);
@@ -292,6 +308,7 @@ const ExperienceForm = () => {
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [skillInput, setSkillInput] = useState("");
 
   useEffect(() => {
     fetchExperiences();
@@ -580,15 +597,26 @@ const ExperienceForm = () => {
                         >
                           {experience.skills.map((skill, index) => (
                             <Chip
-                              key={index}
+                              key={skill}
                               label={skill}
                               size="small"
                               sx={{
-                                backgroundColor: "#F1F5F9",
-                                color: "#475569",
+                                backgroundColor: `hsl(${
+                                  (index * 75) % 360
+                                }, 85%, 97%)`,
+                                color: `hsl(${(index * 75) % 360}, 85%, 35%)`,
+                                border: "1px solid",
+                                borderColor: `hsl(${
+                                  (index * 75) % 360
+                                }, 85%, 90%)`,
                                 fontWeight: 500,
                                 "&:hover": {
-                                  backgroundColor: "#E2E8F0",
+                                  backgroundColor: `hsl(${
+                                    (index * 75) % 360
+                                  }, 85%, 95%)`,
+                                  borderColor: `hsl(${
+                                    (index * 75) % 360
+                                  }, 85%, 85%)`,
                                 },
                               }}
                             />
@@ -810,24 +838,95 @@ const ExperienceForm = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Skills (comma-separated)"
-                value={
-                  Array.isArray(currentExperience.skills)
-                    ? currentExperience.skills.join(", ")
-                    : ""
-                }
-                onChange={(e) =>
-                  setCurrentExperience({
-                    ...currentExperience,
-                    skills: e.target.value
-                      .split(",")
-                      .map((skill) => skill.trim())
-                      .filter(Boolean),
-                  })
-                }
-                helperText="Enter skills separated by commas"
+                label="Add Skill"
+                value={skillInput}
+                onChange={(e) => setSkillInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && skillInput.trim()) {
+                    e.preventDefault();
+                    const newSkill = skillInput.trim();
+                    if (!currentExperience.skills.includes(newSkill)) {
+                      setCurrentExperience((prev) => ({
+                        ...prev,
+                        skills: [...prev.skills, newSkill],
+                      }));
+                      setSkillInput("");
+                      toast.success(`Added skill: ${newSkill}`, {
+                        icon: "🎯",
+                        duration: 2000,
+                      });
+                    } else {
+                      toast.error("This skill already exists", {
+                        icon: "⚠️",
+                        duration: 3000,
+                      });
+                    }
+                  }
+                }}
+                placeholder="Type a skill and press Enter"
+                helperText="Press Enter to add a skill"
                 sx={styles.dialogField}
               />
+              <AnimatePresence>
+                <Stack
+                  direction="row"
+                  flexWrap="wrap"
+                  sx={chipStyles}
+                  component={motion.div}
+                  layout
+                >
+                  {currentExperience.skills.map((skill, index) => (
+                    <motion.div
+                      key={skill}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{
+                        duration: 0.2,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <Chip
+                        label={skill}
+                        onDelete={() => {
+                          setCurrentExperience((prev) => ({
+                            ...prev,
+                            skills: prev.skills.filter((s) => s !== skill),
+                          }));
+                          toast.success(`Removed skill: ${skill}`);
+                        }}
+                        sx={{
+                          maxWidth: "180px",
+                          backgroundColor: `hsl(${
+                            (index * 75) % 360
+                          }, 85%, 97%)`,
+                          borderColor: `hsl(${(index * 75) % 360}, 85%, 90%)`,
+                          color: `hsl(${(index * 75) % 360}, 85%, 35%)`,
+                          border: "1px solid",
+                          "&:hover": {
+                            backgroundColor: `hsl(${
+                              (index * 75) % 360
+                            }, 85%, 95%)`,
+                            borderColor: `hsl(${(index * 75) % 360}, 85%, 85%)`,
+                          },
+                          "& .MuiChip-label": {
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            fontWeight: 600,
+                          },
+                          "& .MuiChip-deleteIcon": {
+                            color: `hsl(${(index * 75) % 360}, 85%, 35%)`,
+                            "&:hover": {
+                              color: `hsl(${(index * 75) % 360}, 85%, 25%)`,
+                            },
+                          },
+                        }}
+                      />
+                    </motion.div>
+                  ))}
+                </Stack>
+              </AnimatePresence>
             </Grid>
             <Grid item xs={12}>
               <TextField

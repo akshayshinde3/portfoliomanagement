@@ -45,7 +45,7 @@ import {
 import { Toaster, toast } from "react-hot-toast";
 import { supabase } from "../../config/supabase";
 import { styled } from "@mui/system";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useScrollLock } from "../../hooks/useScrollLock";
 
 // Add these styled components at the top of your file
@@ -196,6 +196,22 @@ const styles = {
   },
 };
 
+// Add this near your other styles
+const chipStyles = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: { xs: 1, sm: 1.5 },
+  mt: 2,
+  "& .MuiChip-root": {
+    height: { xs: 32, sm: 36 },
+    borderRadius: { xs: "10px", sm: "12px" },
+    fontSize: { xs: "0.813rem", sm: "0.875rem" },
+    "& .MuiChip-label": {
+      px: { xs: 2, sm: 3 },
+    },
+  },
+};
+
 const toastConfig = {
   position: "top-center",
   style: {
@@ -306,6 +322,9 @@ const ProjectForm = () => {
   // Add at the top with other state variables
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+
+  // Add this to your state declarations
+  const [tagInput, setTagInput] = useState("");
 
   useEffect(() => {
     fetchProjects();
@@ -949,14 +968,32 @@ const ProjectForm = () => {
                         direction="row"
                         spacing={1}
                         flexWrap="wrap"
-                        sx={{ gap: 1 }}
+                        sx={{ gap: 1, mt: 2 }}
                       >
                         {project.tags.map((tag, index) => (
                           <Chip
-                            key={index}
+                            key={tag}
                             label={tag}
                             size="small"
-                            sx={styles.chip}
+                            sx={{
+                              backgroundColor: `hsl(${
+                                (index * 75) % 360
+                              }, 85%, 97%)`,
+                              color: `hsl(${(index * 75) % 360}, 85%, 35%)`,
+                              border: "1px solid",
+                              borderColor: `hsl(${
+                                (index * 75) % 360
+                              }, 85%, 90%)`,
+                              fontWeight: 500,
+                              "&:hover": {
+                                backgroundColor: `hsl(${
+                                  (index * 75) % 360
+                                }, 85%, 95%)`,
+                                borderColor: `hsl(${
+                                  (index * 75) % 360
+                                }, 85%, 85%)`,
+                              },
+                            }}
                           />
                         ))}
                       </Stack>
@@ -1117,24 +1154,98 @@ const ProjectForm = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Tags (comma-separated)"
-                value={
-                  Array.isArray(currentProject.tags)
-                    ? currentProject.tags.join(", ")
-                    : ""
-                }
-                onChange={(e) =>
-                  setCurrentProject({
-                    ...currentProject,
-                    tags: e.target.value
-                      .split(",")
-                      .map((tag) => tag.trim())
-                      .filter(Boolean),
-                  })
-                }
-                helperText="Enter tags separated by commas"
+                label="Add Tag"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && tagInput.trim()) {
+                    e.preventDefault();
+                    const newTag = tagInput.trim();
+                    if (!currentProject.tags.includes(newTag)) {
+                      setCurrentProject((prev) => ({
+                        ...prev,
+                        tags: [...prev.tags, newTag],
+                      }));
+                      setTagInput("");
+                      toast.success(`Added tag: ${newTag}`, {
+                        icon: "🏷️",
+                        duration: 2000,
+                      });
+                    } else {
+                      toast.error("This tag already exists", {
+                        icon: "⚠️",
+                        duration: 3000,
+                      });
+                    }
+                  }
+                }}
+                placeholder="Type a tag and press Enter"
+                helperText="Press Enter to add a tag"
                 sx={styles.dialogField}
               />
+              <AnimatePresence>
+                <Stack
+                  direction="row"
+                  flexWrap="wrap"
+                  sx={chipStyles}
+                  component={motion.div}
+                  layout
+                >
+                  {currentProject.tags.map((tag, index) => (
+                    <motion.div
+                      key={tag}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{
+                        duration: 0.2,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <Chip
+                        label={tag}
+                        onDelete={() => {
+                          setCurrentProject((prev) => ({
+                            ...prev,
+                            tags: prev.tags.filter((t) => t !== tag),
+                          }));
+                          toast.success(`Removed tag: ${tag}`, {
+                            icon: "🗑️",
+                            duration: 2000,
+                          });
+                        }}
+                        sx={{
+                          maxWidth: "180px",
+                          backgroundColor: `hsl(${
+                            (index * 75) % 360
+                          }, 85%, 97%)`,
+                          borderColor: `hsl(${(index * 75) % 360}, 85%, 90%)`,
+                          color: `hsl(${(index * 75) % 360}, 85%, 35%)`,
+                          border: "1px solid",
+                          "&:hover": {
+                            backgroundColor: `hsl(${
+                              (index * 75) % 360
+                            }, 85%, 95%)`,
+                            borderColor: `hsl(${(index * 75) % 360}, 85%, 85%)`,
+                          },
+                          "& .MuiChip-label": {
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            fontWeight: 600,
+                          },
+                          "& .MuiChip-deleteIcon": {
+                            color: `hsl(${(index * 75) % 360}, 85%, 35%)`,
+                            "&:hover": {
+                              color: `hsl(${(index * 75) % 360}, 85%, 25%)`,
+                            },
+                          },
+                        }}
+                      />
+                    </motion.div>
+                  ))}
+                </Stack>
+              </AnimatePresence>
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField
